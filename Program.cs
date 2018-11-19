@@ -1,4 +1,5 @@
 ﻿using System;
+using sdf.Core;
 using sdf.Core.Building;
 using sdf.Core.Parsing;
 
@@ -17,6 +18,8 @@ namespace sdf {
 			try {
 				var root = Parser.Parse(args[InputSdfFilenameArgumentIndex]);
 				var data = Builder.Build(root);
+				Printer.Print(data);
+				Console.ReadLine(); // pause
 			} catch (Exception e) {
 				Console.Out.WriteLine("Unable to handle the file you've selected.");
 				Console.Out.WriteLine();

@@ -51,6 +51,7 @@
     <Compile Include="Core\Building\SDF.cs" />
     <Compile Include="Core\Parsing\Expression.cs" />
     <Compile Include="Core\Parsing\Parser.cs" />
+    <Compile Include="Core\Printer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
