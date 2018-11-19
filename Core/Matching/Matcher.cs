@@ -33,8 +33,8 @@ namespace sdf.Core.Matching {
 	}
 
 	public class Matcher {
-		public static List<SDF> Match(SDF s, string path) { // TODO: return "match" objects (with path and parent fields apart from SDF itself)
-			return MatchConditions(s, ParseConditions(path));
+		public static List<Match> Match(SDF s, string path) {
+			return MatchConditions(Matching.Match.MakeRootMatch(s), ParseConditions(path)).Distinct().ToList();
 		}
 
 		private static List<MultipleConditions> ParseConditions(string path) {
@@ -74,13 +74,14 @@ namespace sdf.Core.Matching {
 			}
 		}
 
-		private static List<SDF> MatchConditions(SDF s, List<MultipleConditions> conditionsHierarchy, SDF parent = null, string attributeName = null) {
-			var res = new List<SDF>();
+		private static List<Match> MatchConditions(Match m, List<MultipleConditions> conditionsHierarchy, SDF parent = null, string attributeName = null) {
+			var s = m.Value;
+			var res = new List<Match>();
 			
 			// find nodes that match [0]th condition
 			// recursively run this method on their children/attributes with conditions [1..]
 			if (conditionsHierarchy.Count == 0) {
-				res.Add(s);
+				res.Add(m);
 				return res;
 			}
 
@@ -100,6 +101,7 @@ namespace sdf.Core.Matching {
 			////////// DEBUG
 			Console.WriteLine();
 			PrintPath(conditionsHierarchy);
+			Console.WriteLine(m.Path + " < generated path");
 			Console.WriteLine("hasArbitrary:       "+hasArbitrary);
 			Console.WriteLine("needs at least one: "+arbitraryAtLeastOne);
 			Console.WriteLine(" - we're on:        "+(s is Node ? (s as Node).Name : "<literal>"));
@@ -109,14 +111,14 @@ namespace sdf.Core.Matching {
 
 			if (hasArbitrary && !arbitraryAtLeastOne) { // *
 				// try matching without this hierarchy level
-				res.AddRange(MatchConditions(s, rest, parent, attributeName));
+				res.AddRange(MatchConditions(m, rest, parent, attributeName));
 			}
 
 			if (Matches(s, first, parent, attributeName)) {
 				if (rest.Count == 0) {
-					res.Add(s);
+					res.Add(m);
 				} else {
-					var n = s as Node;
+					var n = m as MatchNode;
 					if (n == null) return res;
 
 					if(hasArbitrary) {

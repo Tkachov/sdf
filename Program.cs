@@ -21,12 +21,14 @@ namespace sdf {
 				var data = Builder.Build(root);
 				Printer.Print(data);
 
-				var matches = Matcher.Match(data, "/node/@attr");
+				var matches = Matcher.Match(data, "/node/");
 				Console.WriteLine();
 				Console.WriteLine();
 				Console.WriteLine(matches.Count + " matches:");
 				foreach (var m in matches) {
-					Printer.Print(m, 1);
+					Console.WriteLine(m.Path);
+					Printer.Print(m.Value, 1);
+					Console.WriteLine();
 				}
 
 				Console.ReadLine(); // pause
