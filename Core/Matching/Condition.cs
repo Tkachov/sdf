@@ -86,7 +86,7 @@ node/@attr[>2] Условие на значение узла, являющего
 						
 			var parentNode = parent as Node;
 			if (parentNode == null)
-				return false;
+				return (Index == 0);
 
 			if (parentNode.Children.Count <= Index)
 				return false;
@@ -100,13 +100,13 @@ node/@attr[>2] Условие на значение узла, являющего
 		public NodeNumberCondition(int i) {
 			Number = i;
 		}
-		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) { // TODO: may be implement it so it counts all elements which match other conditions, not name specifically
 			if (attrbuteName != null)
 				return false;
 
 			var parentNode = parent as Node;
 			if (parentNode == null)
-				return false;
+				return (Number == 0);
 
 			var name = (sdf as Node)?.Name;
 			if (name == null)
