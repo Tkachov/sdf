@@ -49,6 +49,9 @@
   <ItemGroup>
     <Compile Include="Core\Building\Builder.cs" />
     <Compile Include="Core\Building\SDF.cs" />
+    <Compile Include="Core\Matching\Condition.cs" />
+    <Compile Include="Core\Matching\ConditionParser.cs" />
+    <Compile Include="Core\Matching\Matcher.cs" />
     <Compile Include="Core\Parsing\Expression.cs" />
     <Compile Include="Core\Parsing\Parser.cs" />
     <Compile Include="Core\Printer.cs" />
