@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -79,6 +80,19 @@ node/@attr[>2] Условие на значение узла, являющего
 		public NodeIndexCondition(int i) {
 			Index = i;
 		}
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+			if (attrbuteName != null)
+				return false;
+						
+			var parentNode = parent as Node;
+			if (parentNode == null)
+				return false;
+
+			if (parentNode.Children.Count <= Index)
+				return false;
+
+			return (parentNode.Children[Index] == sdf);
+		}
 	}
 
 	internal class NodeNumberCondition: Condition {
@@ -86,9 +100,93 @@ node/@attr[>2] Условие на значение узла, являющего
 		public NodeNumberCondition(int i) {
 			Number = i;
 		}
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+			if (attrbuteName != null)
+				return false;
+
+			var parentNode = parent as Node;
+			if (parentNode == null)
+				return false;
+
+			var name = (sdf as Node)?.Name;
+			if (name == null)
+				return false;
+
+			var number = 0;
+			foreach (var child in parentNode.Children) {
+				if ((child as Node)?.Name == name) {
+					if (child == sdf)
+						return true;
+					++number;
+				}
+			}
+
+			return false;
+		}
 	}
 
-	// TODO: node type condition (^n)
+	internal enum SDFType {
+		Node,
+		Null,
+		Number,
+		String,
+		Boolean
+	}
+
+	internal class TypeCondition: Condition {
+		public readonly SDFType Type;
+
+		public TypeCondition(string type) {
+			switch (type) {
+				case "node":
+					Type = SDFType.Node;
+					break;
+
+				case "null":
+					Type = SDFType.Null;
+					break;
+
+				case "number":
+					Type = SDFType.Number;
+					break;
+
+				case "string":
+					Type = SDFType.String;
+					break;
+
+				case "bool":
+				case "boolean":
+					Type = SDFType.Boolean;
+					break;
+
+				default:
+					throw new InvalidDataException();
+			}
+		}
+
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+			switch (Type) {
+				case SDFType.Node:
+					return (sdf is Node);
+
+				case SDFType.Null:
+					return (sdf is NullLiteral);
+
+				case SDFType.Number:
+					return (sdf is NumberLiteral);
+
+				case SDFType.String:
+					return (sdf is StringLiteral);
+
+				case SDFType.Boolean:
+					return (sdf is BooleanLiteral);
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+	}
+	
 	// TODO: node value condition ([>2])
 	// TODO: attribute value condition ([@attr>2])
 }

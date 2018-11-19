@@ -21,7 +21,7 @@ namespace sdf {
 				var data = Builder.Build(root);
 				Printer.Print(data);
 
-				var matches = Matcher.Match(data, "/+");
+				var matches = Matcher.Match(data, "subnode@0");
 				Console.WriteLine();
 				Console.WriteLine();
 				Console.WriteLine(matches.Count + " matches:");
@@ -30,14 +30,14 @@ namespace sdf {
 					Printer.Print(m.Value, 1);
 					Console.WriteLine();
 				}
-
-				Console.ReadLine(); // pause
 			} catch (Exception e) {
 				Console.Out.WriteLine("Unable to handle the file you've selected.");
 				Console.Out.WriteLine();
 				Console.Out.WriteLine("Information:");
 				Console.Out.WriteLine(e.Message);
 			}
+
+			Console.ReadLine(); // pause
 		}
 	}
 }

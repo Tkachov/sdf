@@ -71,13 +71,23 @@ namespace sdf.Core.Matching {
 					Console.Write("@" + (c as AttributeNameCondition).AttributeName);
 				else if (c is ArbitraryNodeHierarchyCondition)
 					Console.Write((c as ArbitraryNodeHierarchyCondition).AtLeastOne ? "+" : "*");
+				else if (c is TypeCondition) {
+					Console.Write("^");
+					switch ((c as TypeCondition).Type) {
+						case SDFType.Node: Console.Write("node"); break;
+						case SDFType.Null: Console.Write("null"); break;
+						case SDFType.Number: Console.Write("number"); break;
+						case SDFType.String: Console.Write("string"); break;
+						case SDFType.Boolean: Console.Write("bool"); break;
+					}
+				}
 			}
 		}
 
 		private static List<Match> MatchConditions(Match m, List<MultipleConditions> conditionsHierarchy, SDF parent = null, string attributeName = null) {
 			var s = m.Value;
 			var res = new List<Match>();
-			
+
 			// find nodes that match [0]th condition
 			// recursively run this method on their children/attributes with conditions [1..]
 			if (conditionsHierarchy.Count == 0) {
@@ -101,11 +111,14 @@ namespace sdf.Core.Matching {
 			////////// DEBUG
 			Console.WriteLine();
 			PrintPath(conditionsHierarchy);
+			Console.Write("/");
+			PrintConditions(first.conditions);
+			Console.WriteLine(" < current stage");
 			Console.WriteLine(m.Path + " < generated path");
-			Console.WriteLine("hasArbitrary:       "+hasArbitrary);
-			Console.WriteLine("needs at least one: "+arbitraryAtLeastOne);
-			Console.WriteLine(" - we're on:        "+(s is Node ? (s as Node).Name : "<literal>"));
-			Console.WriteLine(" - matches:         "+Matches(s, first, parent, attributeName));
+			Console.WriteLine("hasArbitrary:       " + hasArbitrary);
+			Console.WriteLine("needs at least one: " + arbitraryAtLeastOne);
+			Console.WriteLine(" - we're on:        " + (s is Node ? (s as Node).Name : "<literal>"));
+			Console.WriteLine(" - matches:         " + Matches(s, first, parent, attributeName));
 			Console.WriteLine();
 			//////////
 
@@ -115,16 +128,15 @@ namespace sdf.Core.Matching {
 			}
 
 			if (Matches(s, first, parent, attributeName)) {
-				var n = m as MatchNode;
-				if (n == null) {
-					// if not a node and no inner hierarchy conditions left, literal matches
-					if (rest.Count == 0) {
-						// but if current rule has '+', literal does not match
-						if (!hasArbitrary || !arbitraryAtLeastOne)
-							res.Add(m);
-					}
-					return res;
+				// if no inner hierarchy conditions left, sdf matches
+				if (rest.Count == 0) {
+					// but if current rule has '+', sdf does not match
+					if (!hasArbitrary || !arbitraryAtLeastOne)
+						res.Add(m);
 				}
+
+				var n = m as MatchNode;
+				if (n == null) return res;
 
 				if (hasArbitrary) {
 					// pass arbitrary
@@ -153,19 +165,21 @@ namespace sdf.Core.Matching {
 					}
 				}
 
-				foreach (var c in n.Children) {
-					res.AddRange(MatchConditions(c, rest, s, null));
-				}
+				if (rest.Count > 0) {
+					foreach (var c in n.Children) {
+						res.AddRange(MatchConditions(c, rest, s, null));
+					}
 
-				foreach (var c in n.Attributes) {
-					res.AddRange(MatchConditions(c.Value, rest, s, c.Key));
-				}				
+					foreach (var c in n.Attributes) {
+						res.AddRange(MatchConditions(c.Value, rest, s, c.Key));
+					}
+				}
 			}
 
 			return res;
 		}
 
-		private static bool Matches(SDF sdf, MultipleConditions first, SDF parent, string attrbuteName) {			
+		private static bool Matches(SDF sdf, MultipleConditions first, SDF parent, string attrbuteName) {
 			return first.Matches(sdf, parent, attrbuteName);
 		}
 	}

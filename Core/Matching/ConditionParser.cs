@@ -83,6 +83,7 @@ namespace sdf.Core.Matching {
 
 			// reset state
 			_currentlyParsing = TokenType.NodeName;
+			_buffer = "";
 		}
 
 		private Condition GetConditionFromBuffer() {
@@ -96,13 +97,13 @@ namespace sdf.Core.Matching {
 					return new AttributeNameCondition(_buffer);
 
 				case TokenType.NodeIndex:
-					return new NodeIndexCondition(0); // TODO: parseInt
+					return new NodeIndexCondition(int.Parse(_buffer));
 
 				case TokenType.NodeNumber:
-					return new NodeNumberCondition(0); // TODO: parseInt
+					return new NodeNumberCondition(int.Parse(_buffer));
 
 				case TokenType.Type:
-					return null; // TODO: type condition
+					return new TypeCondition(_buffer);
 
 				case TokenType.ValueCondition:
 					return null; // TODO: value condition
