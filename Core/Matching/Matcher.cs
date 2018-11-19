@@ -115,47 +115,51 @@ namespace sdf.Core.Matching {
 			}
 
 			if (Matches(s, first, parent, attributeName)) {
-				if (rest.Count == 0) {
-					res.Add(m);
-				} else {
-					var n = m as MatchNode;
-					if (n == null) return res;
+				var n = m as MatchNode;
+				if (n == null) {
+					// if not a node and no inner hierarchy conditions left, literal matches
+					if (rest.Count == 0) {
+						// but if current rule has '+', literal does not match
+						if (!hasArbitrary || !arbitraryAtLeastOne)
+							res.Add(m);
+					}
+					return res;
+				}
 
-					if(hasArbitrary) {
-						// pass arbitrary
-						List<MultipleConditions> modifiedConditions = new List<MultipleConditions>();
-						if(arbitraryAtLeastOne) {
-							// replace + with *, as we have matched one already
-							List<Condition> modConditions = new List<Condition>();
-							foreach(var c in conditions) {
-								if(c is ArbitraryNodeHierarchyCondition) {
-									modConditions.Add(new ArbitraryNodeHierarchyCondition(false));
-								} else
-									modConditions.Add(c);
-							}
-							modifiedConditions.Add(new MultipleConditions(modConditions));
-						} else {
-							modifiedConditions.Add(first);
+				if (hasArbitrary) {
+					// pass arbitrary
+					List<MultipleConditions> modifiedConditions = new List<MultipleConditions>();
+					if (arbitraryAtLeastOne) {
+						// replace + with *, as we have matched one already
+						List<Condition> modConditions = new List<Condition>();
+						foreach (var c in conditions) {
+							if (c is ArbitraryNodeHierarchyCondition) {
+								modConditions.Add(new ArbitraryNodeHierarchyCondition(false));
+							} else
+								modConditions.Add(c);
 						}
-						modifiedConditions.AddRange(rest);
+						modifiedConditions.Add(new MultipleConditions(modConditions));
+					} else {
+						modifiedConditions.Add(first);
+					}
+					modifiedConditions.AddRange(rest);
 
-						foreach (var c in n.Children) {
-							res.AddRange(MatchConditions(c, modifiedConditions, s, null));
-						}
-
-						foreach(var c in n.Attributes) {
-							res.AddRange(MatchConditions(c.Value, modifiedConditions, s, c.Key));
-						}
+					foreach (var c in n.Children) {
+						res.AddRange(MatchConditions(c, modifiedConditions, s, null));
 					}
 
-					foreach(var c in n.Children) {
-						res.AddRange(MatchConditions(c, rest, s, null));
-					}
-
-					foreach(var c in n.Attributes) {
-						res.AddRange(MatchConditions(c.Value, rest, s, c.Key));
+					foreach (var c in n.Attributes) {
+						res.AddRange(MatchConditions(c.Value, modifiedConditions, s, c.Key));
 					}
 				}
+
+				foreach (var c in n.Children) {
+					res.AddRange(MatchConditions(c, rest, s, null));
+				}
+
+				foreach (var c in n.Attributes) {
+					res.AddRange(MatchConditions(c.Value, rest, s, c.Key));
+				}				
 			}
 
 			return res;

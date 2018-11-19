@@ -21,7 +21,7 @@ namespace sdf {
 				var data = Builder.Build(root);
 				Printer.Print(data);
 
-				var matches = Matcher.Match(data, "/node/");
+				var matches = Matcher.Match(data, "/+");
 				Console.WriteLine();
 				Console.WriteLine();
 				Console.WriteLine(matches.Count + " matches:");
