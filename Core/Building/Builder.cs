@@ -113,9 +113,12 @@ namespace sdf.Core.Building {
 
 			if (lowercased == "true" || lowercased == "false")
 				return new BooleanLiteral(lowercased == "true");
+			
+			var index = lowercased.IndexOf('.');
+			if (index == -1)
+				return new NumberLiteral(long.Parse(lowercased), 0);
 
-			// TODO: build a number literal
-			return new NumberLiteral(0, 0);
+			return new NumberLiteral(long.Parse(lowercased.Substring(0, index)), long.Parse(lowercased.Substring(index+1)));
 		}
 	}
 }
