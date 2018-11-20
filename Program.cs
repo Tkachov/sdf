@@ -21,7 +21,7 @@ namespace sdf {
 				var data = Builder.Build(root);
 				Printer.Print(data);
 
-				var matches = Matcher.Match(data, "[attr_has_attr(@attr, attr-node-attr)]"); // returns /node
+				var matches = data.Find("node");
 				Console.WriteLine();
 				Console.WriteLine();
 				Console.WriteLine(matches.Count + " matches:");
