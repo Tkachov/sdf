@@ -66,7 +66,7 @@ namespace sdf.Core.Building {
 				var oldValue = m.Value;
 				var parent = m.Parent.Value as Node; // parents can only be nodes
 				if (parent == null) {
-					throw new InvalidDataException();
+					throw new InvalidDataException("Element has parent which is not a Node (impossible).");
 				}
 
 				var index = parent.Children.IndexOf(oldValue);
@@ -82,7 +82,7 @@ namespace sdf.Core.Building {
 						}
                     }
 					if (!found) {
-						throw new InvalidDataException();
+						throw new InvalidDataException("Cannot replace element because element's parent doesn't have it neither as a child nor as an attribute.");
 					}
 				}
 			}
@@ -96,10 +96,10 @@ namespace sdf.Core.Building {
 			foreach (var match in matches) {
 				var node = match.Value as Node;
 				if (node == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot add an attribute to something but a Node.");
 
 				if (node.Attributes.ContainsKey(attributeName))
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot add an attribute, because attribute with such name already exists.");
 
 				node.Attributes[attributeName] = value;
 			}
@@ -110,7 +110,7 @@ namespace sdf.Core.Building {
 			foreach (var match in matches) {
 				var node = match.Value as Node;
 				if (node == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot add a child to something but a Node.");
 
 				node.Children.Add(value);
 			}
@@ -121,7 +121,7 @@ namespace sdf.Core.Building {
 			foreach (var match in matches) {
 				var node = match.Value as Node;
 				if (node == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot insert a child into something but a Node.");
 
 				node.Children.Insert(index, value);
 			}
@@ -132,11 +132,11 @@ namespace sdf.Core.Building {
 			var matches = Find(path);
 			foreach (var match in matches) {
 				if (match.Parent == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot add something next to root element.");
 
 				var node = match.Parent.Value as Node;
 				if (node == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot insert a child into something but a Node.");
 				
 				node.InsertBeforeChild(match.Value, value);
 			}
@@ -146,11 +146,11 @@ namespace sdf.Core.Building {
 			var matches = Find(path);
 			foreach (var match in matches) {
 				if (match.Parent == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot add something next to root element.");
 
 				var node = match.Parent.Value as Node;
 				if (node == null)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Cannot insert a child into something but a Node.");
 
 				node.InsertAfterChild(match.Value, value);
 			}
@@ -169,7 +169,7 @@ namespace sdf.Core.Building {
 				var oldValue = m.Value;
 				var parent = m.Parent.Value as Node; // parents can only be nodes
 				if (parent == null) {
-					throw new InvalidDataException();
+					throw new InvalidDataException("Element has parent which is not a Node (impossible).");
 				}
 				
 				if (parent.Children.Contains(oldValue)) {
@@ -184,7 +184,7 @@ namespace sdf.Core.Building {
 						}
 					}
 					if (!found) {
-						throw new InvalidDataException();
+						throw new InvalidDataException("Cannot remove element because element's parent doesn't have it neither as a child nor as an attribute.");
 					}
 				}
 			}
@@ -207,7 +207,7 @@ namespace sdf.Core.Building {
 		public void InsertBeforeChild(SDF child, SDF value) {
 			var index = Children.IndexOf(child);
 			if (index == -1)
-				throw new ArgumentException();
+				throw new ArgumentException("Argument passed as <child> is not a child of Node, thus <value> cannot be inserted before it.");
 
 			Children.Insert(index, value);
 		}
@@ -215,7 +215,7 @@ namespace sdf.Core.Building {
 		public void InsertAfterChild(SDF child, SDF value) {
 			var index = Children.IndexOf(child);
 			if (index == -1)
-				throw new ArgumentException();
+				throw new ArgumentException("Argument passed as <child> is not a child of Node, thus <value> cannot be inserted after it.");
 			
 			Children.Insert(index+1, value);
 		}

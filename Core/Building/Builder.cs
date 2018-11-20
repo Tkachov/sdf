@@ -18,10 +18,10 @@ namespace sdf.Core.Building {
 
 		private static Node BuildNode(ListExpression e) {
 			if (e.Type != ListBracketsType.Round)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Syntax error: () list expected while building a Node.");
 
 			if (e.Contents.Count < 1 || e.Contents.Count > 3)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Syntax error: Node's () list must contain from 1 to 3 element within.");
 
 			string name;
 			var attributes = new Dictionary<string, SDF>();
@@ -32,7 +32,7 @@ namespace sdf.Core.Building {
 			var first = e.Contents[0];
 			var literalFirst = (first as LiteralExpression);
 			if (literalFirst == null || literalFirst.Type != LiteralType.Keyword)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Syntax error: Node's name must be a keyword.");
 
 			name = literalFirst.Value; // TODO: check name matches regexp
 
@@ -62,7 +62,7 @@ namespace sdf.Core.Building {
 
 		private static void BuildAttributes(ref Dictionary<string, SDF> attributes, ListExpression list) {
 			if (list.Type != ListBracketsType.Curly)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Syntax error: {} list excepted while building Node's attributes.");
 
 			LiteralExpression key = null;
 			var odd = true;
@@ -70,7 +70,7 @@ namespace sdf.Core.Building {
 				if (odd) {
 					key = expr as LiteralExpression;
 					if (key == null || key.Type == LiteralType.String)
-						throw new InvalidDataException();
+						throw new InvalidDataException("Syntax error: attribute name must be a keyword.");
 				} else {
 					attributes.Add(key.Value, Build(expr));
 				}
@@ -88,7 +88,7 @@ namespace sdf.Core.Building {
 
 			// list
 			if (list.Type == ListBracketsType.Curly)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Syntax error: Node's child or children cannot be represented as {} list.");
 
 			// single node
 			if (list.Type == ListBracketsType.Round) {

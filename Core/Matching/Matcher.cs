@@ -25,7 +25,7 @@ namespace sdf.Core.Matching {
 
 			var count = 0;
 			if (Conditions.OfType<ArbitraryNodeHierarchyCondition>().Any(c => ++count > 1)) {
-				throw new InvalidDataException();
+				throw new InvalidDataException("Cannot have multiple arbitrary node hierarchy conditions (* or +) at the same hierarchy level.");
 			}
 		}
 		

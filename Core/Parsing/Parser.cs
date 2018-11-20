@@ -90,7 +90,7 @@ namespace sdf.Core.Parsing {
 			while (true) {
 				SkipWhitespace();
 				if (EndOfFile)
-					throw new InvalidDataException();
+					throw new InvalidDataException("Unexpected EOF while parsing list expression.");
 				if (CurrentCharacter == listEndingCharacter) {
 					MoveToNextCharacter();
 					break;
@@ -146,7 +146,7 @@ namespace sdf.Core.Parsing {
 							result += '\v';
 							break;
 						default:
-							throw new InvalidDataException();
+							throw new InvalidDataException("Unknown escape sequence within string: \\" + CurrentCharacter);
 					}
 					continue;
 				}
@@ -160,7 +160,7 @@ namespace sdf.Core.Parsing {
 			}
 
 			if (EndOfFile)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Unexpected EOF while parsing string expression.");
 
 			MoveToNextCharacter();
 			return new LiteralExpression(LiteralType.String, result);

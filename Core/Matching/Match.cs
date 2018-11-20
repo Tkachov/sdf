@@ -65,7 +65,7 @@ namespace sdf.Core.Matching {
 		public MatchNode(SDF value, string path, Match parent): base(value, path, parent) {
 			var n = value as Node;
 			if (n == null)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Cannot create MatchNode from something but a Node.");
 
 			var index = 0;
 			Children = n.Children.Select(c => MakeMatch(c, this, index++, n.Children.Count > 1)).ToList();

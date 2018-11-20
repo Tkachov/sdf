@@ -128,7 +128,7 @@ namespace sdf.Core.Matching {
 					break;
 
 				default:
-					throw new InvalidDataException();
+					throw new InvalidDataException("Unknown type \""+type+"\" passed in type condition.");
 			}
 		}
 
@@ -196,23 +196,23 @@ namespace sdf.Core.Matching {
 				}
 			}
 
-			throw new InvalidDataException();
+			throw new InvalidDataException("Invalid value condition: no known operators or predicates found.");
 		}		
 
 		private static NodeValueCondition ParseNodeFunction(string condition, string functionName) {
 			var firstBrace = condition.IndexOf("(", functionName.Length);
 			if (firstBrace == -1)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Predicate in value condition does not have opening brace.");
 
 			var secondBrace = condition.IndexOf(")", firstBrace);
 			if (secondBrace == -1)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Predicate in value condition does not have closing brace.");
 
 			var args = condition.Substring(firstBrace + 1, secondBrace - firstBrace - 1);
 			var expr = Parser.ParseString(args);
 			var literal = expr as LiteralExpression;
 			if (literal == null || literal.Type != LiteralType.Keyword)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Argument of a predicate in value condition is not a simple word.");
 			
 			return new NodeValueCondition(new NodeOperatorCondition(functionName, literal.Value));
 		}
@@ -220,28 +220,28 @@ namespace sdf.Core.Matching {
 		private static AttributeValueCondition ParseAttributeFunction(string condition, string functionName) {
 			var firstBrace = condition.IndexOf("(", functionName.Length);
 			if (firstBrace == -1)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Predicate in value condition does not have opening brace.");
 
 			var secondBrace = condition.IndexOf(")", firstBrace);
 			if (secondBrace == -1)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Predicate in value condition does not have closing brace.");
 
 			var args = condition.Substring(firstBrace, secondBrace - firstBrace + 1).Replace(",", " ");
 			var expr = Parser.ParseString(args);
 			var list = expr as ListExpression;
 			if (list == null || list.Type != ListBracketsType.Round || list.Contents.Count != 2)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Binary predicate in value condition does not have two arguments.");
 
 			var first = list.Contents[0];
 			var second = list.Contents[1];
 			var firstLiteral = first as LiteralExpression;
 			var secondLiteral = second as LiteralExpression;
 			if (firstLiteral == null || firstLiteral.Type != LiteralType.Keyword || secondLiteral == null || secondLiteral.Type != LiteralType.Keyword)
-				throw new InvalidDataException();
+				throw new InvalidDataException("Argument of a predicate in value condition is not a simple word.");
 
 			var attributeName = firstLiteral.Value;
 			if (!attributeName.StartsWith("@"))
-				throw new InvalidDataException();
+				throw new InvalidDataException("Invalid attribute name given (does not start with an @).");
 			attributeName = attributeName.Substring(1); // remove @
 
 			functionName = functionName.Substring(5); // remove "attr_"
@@ -253,7 +253,7 @@ namespace sdf.Core.Matching {
 			if (index > 0) {
 				attributeName = condition.Substring(0, index);
 				if (!attributeName.StartsWith("@"))
-					throw new InvalidDataException();
+					throw new InvalidDataException("Invalid attribute name given (does not start with an @).");
 
 				attributeName = attributeName.Substring(1); // remove @
 			}
@@ -261,7 +261,7 @@ namespace sdf.Core.Matching {
 			var value = condition.Substring(index + operatorName.Length);
 			var expr = Parser.ParseString(value);
 			if (!(expr is LiteralExpression))
-				throw new InvalidDataException();
+				throw new InvalidDataException("Argument of an operator in value condition is not a literal.");
 			var sdf = Builder.Build(expr);
 			OperatorCondition operatorCondition;
 
@@ -274,7 +274,7 @@ namespace sdf.Core.Matching {
 				case ">": case "<": case ">=": case "<=":
 					// number operators
 					if (!(sdf is NumberLiteral))
-						throw new InvalidDataException();
+						throw new InvalidDataException("Cannot apply a number operator in value condition to something but a number literal.");
 
 					operatorCondition = new NumberOperatorCondition(operatorName, (NumberLiteral) sdf);
 				break;
@@ -282,13 +282,13 @@ namespace sdf.Core.Matching {
 				case "~=": case "^=": case "$=": case "!~=": case "!^=": case "!$=":
 					// string operators
 					if (!(sdf is StringLiteral))
-						throw new InvalidDataException();
+						throw new InvalidDataException("Cannot apply a string operator in value condition to something but a string literal.");
 
 					operatorCondition = new StringOperatorCondition(operatorName, (StringLiteral)sdf);
 				break;
 
 				default:
-					throw new InvalidDataException();
+					throw new InvalidDataException("Unknown operator given.");
 			}
 
 			if (attributeName != null)
