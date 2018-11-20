@@ -26,15 +26,17 @@ namespace sdf.Core.Building {
 			return Matcher.Match(this, path);
 		}
 
-		public SDF Replace(string path, SDF newValue) {
+		private List<Match> FindTopMatches(string path) {
 			var matches = Find(path);
 			var topMatches = new List<Match>();
+
 			foreach (var m in matches) {
 				// check whether <m> has any other match as a parent (not exactly direct)
 				var found = false;
 				foreach (var o in matches) {
 					if (found) break;
 					if (m == o) continue;
+
 					var p = m;
 					while (p != null) {
 						if (p.Parent == o) {
@@ -48,7 +50,13 @@ namespace sdf.Core.Building {
 
 				if (!found) topMatches.Add(m);
 			}
-			
+
+			return topMatches;
+		}
+
+		public SDF Replace(string path, SDF newValue) {
+			var topMatches = FindTopMatches(path);
+
 			foreach (var m in topMatches) {
 				if (m.Parent == null) {
 					// if root is being replaced
@@ -111,6 +119,42 @@ namespace sdf.Core.Building {
 		// the following two don't work on root (because path points to Node's child, and root is not a child)
 		// TODO: InsertBefore(path, value)
 		// TODO: InsertAfter(path, value)
+
+		// looks similar to Replace, but simply removes matching elements instead of replacing with a new value
+		public SDF Remove(string path) {
+			var topMatches = FindTopMatches(path);
+
+			foreach (var m in topMatches) {
+				if (m.Parent == null) {
+					// if root is being removed
+					return null;
+				}
+
+				var oldValue = m.Value;
+				var parent = m.Parent.Value as Node; // parents can only be nodes
+				if (parent == null) {
+					throw new InvalidDataException();
+				}
+				
+				if (parent.Children.Contains(oldValue)) {
+					parent.Children.Remove(oldValue);
+				} else { // not a child, then must be an attribute
+					var found = false;
+					foreach (var pair in parent.Attributes) {
+						if (pair.Value == oldValue) {
+							parent.Attributes.Remove(pair.Key);
+							found = true;
+							break;
+						}
+					}
+					if (!found) {
+						throw new InvalidDataException();
+					}
+				}
+			}
+
+			return this;
+		}
 	}
 
 	public class Node: SDF {
