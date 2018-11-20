@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,11 +8,11 @@ using sdf.Core.Building;
 
 namespace sdf.Core.Matching {
 	internal class MultipleConditions {
-		public readonly List<Condition> conditions;
+		public readonly List<Condition> Conditions;
 
 		public bool HasArbitraryHierarchy {
 			get {
-				foreach (var c in conditions) {
+				foreach (var c in Conditions) {
 					if (c is ArbitraryNodeHierarchyCondition)
 						return true;
 				}
@@ -20,15 +21,16 @@ namespace sdf.Core.Matching {
 		}
 
 		public MultipleConditions(List<Condition> l) {
-			conditions = l;
+			Conditions = l;
+
+			var count = 0;
+			if (Conditions.OfType<ArbitraryNodeHierarchyCondition>().Any(c => ++count > 1)) {
+				throw new InvalidDataException();
+			}
 		}
 		
 		internal bool Matches(SDF sdf, SDF parent, string attrbuteName) {
-			foreach(var c in conditions) {
-				if(!c.Matches(sdf, parent, attrbuteName))
-					return false;
-			}
-			return true; //(conditions.Count == 0);
+			return Conditions.All(c => c.Matches(sdf, parent, attrbuteName));
 		}
 	}
 
@@ -58,7 +60,7 @@ namespace sdf.Core.Matching {
 		private static void PrintPath(List<MultipleConditions> conditions) {
 			foreach (var c in conditions) {
 				Console.Write("/");
-				PrintConditions(c.conditions);
+				PrintConditions(c.Conditions);
 			}
 			Console.WriteLine();
 		}
@@ -98,7 +100,7 @@ namespace sdf.Core.Matching {
 			MultipleConditions first = conditionsHierarchy[0];
 			List<MultipleConditions> rest = conditionsHierarchy.GetRange(1, conditionsHierarchy.Count - 1);
 
-			List<Condition> conditions = first.conditions;
+			List<Condition> conditions = first.Conditions;
 			bool hasArbitrary = first.HasArbitraryHierarchy;
 			bool arbitraryAtLeastOne = false;
 			foreach (var c in conditions) {
@@ -112,7 +114,7 @@ namespace sdf.Core.Matching {
 			Console.WriteLine();
 			PrintPath(conditionsHierarchy);
 			Console.Write("/");
-			PrintConditions(first.conditions);
+			PrintConditions(first.Conditions);
 			Console.WriteLine(" < current stage");
 			Console.WriteLine(m.Path + " < generated path");
 			Console.WriteLine("hasArbitrary:       " + hasArbitrary);
