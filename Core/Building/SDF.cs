@@ -116,9 +116,45 @@ namespace sdf.Core.Building {
 			}
 		}
 
+		public void InsertAt(string path, int index, SDF value) {
+			var matches = Find(path);
+			foreach (var match in matches) {
+				var node = match.Value as Node;
+				if (node == null)
+					throw new InvalidDataException();
+
+				node.Children.Insert(index, value);
+			}
+		}
+
 		// the following two don't work on root (because path points to Node's child, and root is not a child)
-		// TODO: InsertBefore(path, value)
-		// TODO: InsertAfter(path, value)
+		public void InsertBefore(string path, SDF value) {
+			var matches = Find(path);
+			foreach (var match in matches) {
+				if (match.Parent == null)
+					throw new InvalidDataException();
+
+				var node = match.Parent.Value as Node;
+				if (node == null)
+					throw new InvalidDataException();
+				
+				node.InsertBeforeChild(match.Value, value);
+			}
+		}
+
+		public void InsertAfter(string path, SDF value) {
+			var matches = Find(path);
+			foreach (var match in matches) {
+				if (match.Parent == null)
+					throw new InvalidDataException();
+
+				var node = match.Parent.Value as Node;
+				if (node == null)
+					throw new InvalidDataException();
+
+				node.InsertAfterChild(match.Value, value);
+			}
+		}
 
 		// looks similar to Replace, but simply removes matching elements instead of replacing with a new value
 		public SDF Remove(string path) {
@@ -166,6 +202,22 @@ namespace sdf.Core.Building {
 			Name = name;
 			Attributes = attributes;
 			Children = children;
+		}
+		
+		public void InsertBeforeChild(SDF child, SDF value) {
+			var index = Children.IndexOf(child);
+			if (index == -1)
+				throw new ArgumentException();
+
+			Children.Insert(index, value);
+		}
+
+		public void InsertAfterChild(SDF child, SDF value) {
+			var index = Children.IndexOf(child);
+			if (index == -1)
+				throw new ArgumentException();
+			
+			Children.Insert(index+1, value);
 		}
 	}
 
