@@ -27,7 +27,7 @@ namespace sdf.Core.Building {
 		}
 
 		public SDF Replace(string path, SDF newValue) {
-			var matches = Matcher.Match(this, path);
+			var matches = Find(path);
 			var topMatches = new List<Match>();
 			foreach (var m in matches) {
 				// check whether <m> has any other match as a parent (not exactly direct)
@@ -81,6 +81,36 @@ namespace sdf.Core.Building {
 
 			return this;
 		}
+
+		// the following two work only on Nodes
+		public void AddAttribute(string path, string attributeName, SDF value) {
+			var matches = Find(path);
+			foreach (var match in matches) {
+				var node = match.Value as Node;
+				if (node == null)
+					throw new InvalidDataException();
+
+				if (node.Attributes.ContainsKey(attributeName))
+					throw new InvalidDataException();
+
+				node.Attributes[attributeName] = value;
+			}
+		}
+		
+		public void AddChild(string path, SDF value) {
+			var matches = Find(path);
+			foreach (var match in matches) {
+				var node = match.Value as Node;
+				if (node == null)
+					throw new InvalidDataException();
+
+				node.Children.Add(value);
+			}
+		}
+
+		// the following two don't work on root (because path points to Node's child, and root is not a child)
+		// TODO: InsertBefore(path, value)
+		// TODO: InsertAfter(path, value)
 	}
 
 	public class Node: SDF {
