@@ -11,15 +11,22 @@ namespace sdf.Core.Parsing {
 		private char CurrentCharacter => _contents[_position];
 		private bool EndOfFile => _position >= _contents.Length;
 
-		private Parser([NotNull] string filename) {
-			using (var streamReader = new StreamReader(filename, Encoding.UTF8)) {
-				_contents = streamReader.ReadToEnd();
-			}
+		private Parser([NotNull] string contents) {
+			_contents = contents;
 			_position = 0;
 		}
 
+		private Parser([NotNull] TextReader streamReader): this(streamReader.ReadToEnd()) {}
+
 		public static Expression Parse([NotNull] string filename) {
-			var parser = new Parser(filename);
+			using (var streamReader = new StreamReader(filename, Encoding.UTF8)) {
+				var parser = new Parser(streamReader);
+				return parser.Parse();
+			}
+		}
+
+		public static Expression ParseString([NotNull] string s) {
+			var parser = new Parser(s);
 			return parser.Parse();
 		}
 

@@ -106,7 +106,7 @@ namespace sdf.Core.Matching {
 					return new TypeCondition(_buffer);
 
 				case TokenType.ValueCondition:
-					return null; // TODO: value condition
+					return ValueCondition.Parse(_buffer);
 
 				default:
 					throw new ArgumentOutOfRangeException();

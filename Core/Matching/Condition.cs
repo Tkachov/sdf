@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using sdf.Core.Building;
+using sdf.Core.Parsing;
+using Expression = System.Linq.Expressions.Expression;
 
 namespace sdf.Core.Matching {
 	/*
@@ -186,7 +188,284 @@ node/@attr[>2] Условие на значение узла, являющего
 			}
 		}
 	}
-	
-	// TODO: node value condition ([>2])
-	// TODO: attribute value condition ([@attr>2])
+
+	// TODO: node/attribute value predicate conditions
+
+	internal class ValueCondition: Condition {
+		internal ValueCondition() {}
+
+		public static ValueCondition Parse(string condition) {
+			// condition: attribute-condition | value-condition
+			// attribute-condition: attribute-name attribute-value-condition | attribute-node-condition
+			// attribute-name: @ name
+			// attribute-value-condition: number-condition | string-condition | bool-or-null-condition
+			// value-condition: number-condition | string-condition | bool-or-null-condition | node-condition			
+			// number-condition: [> < >= <= = !=] number-value
+			// string-condition: [= != ~= ^= $= !~= !^= !$=] string-value 
+			// bool-or-null-condition: [= !=] bool-or-null-value
+			// node-condition: [has_child has_attr] ( name )
+			// attribute-node-condition: [attr_has_child attr_has_attr] ( attribute-name name )
+
+			// condition: binary-operator | function-operator
+			// binary-operator: [attribute-name] one-of(= != > < >= <= ~= ^= $= !~= !^= !$=) value
+			// function-operator: unary-function | binary-function
+			// unary-function: unary-function-name ( name )
+			// binary-function: binary-function-name ( attribute-name , name )
+			// attribute-name: @ name
+			// unary-function-name: one-of(has_child has_attr)
+			// binary-function-name: one-of(attr_has_child attr_has_attr)
+
+			Console.WriteLine(condition);
+
+			string[] nodeFunctions = {"has_child", "has_attr"};
+			string[] attrFunctions = {"attr_has_child", "attr_has_attr"};
+
+			foreach (var f in nodeFunctions)
+				if (condition.StartsWith(f))
+					return ParseNodeFunction(condition, f);
+
+			foreach (var f in attrFunctions)
+				if (condition.StartsWith(f))
+					return ParseAttributeFunction(condition, f);
+
+			string[] operators = {"!~=", "!^=", "!$=", "!=", ">=", "<=", "~=", "^=", "$=", "=",  ">", "<"}; // in order of most unique to least unique ('=' is a substring of '!~=')
+			foreach (var o in operators) {
+				var index = condition.IndexOf(o);
+				if (index != -1) {
+					return ParseOperator(condition, o, index);
+				}
+			}
+
+			throw new InvalidDataException();
+		}		
+
+		private static NodeValueCondition ParseNodeFunction(string condition, string functionName) {
+			Console.WriteLine("parsing node function "+functionName);
+			throw new NotImplementedException();
+		}
+
+		private static AttributeValueCondition ParseAttributeFunction(string condition, string functionName) {
+			Console.WriteLine("parsing attribute function "+functionName);
+			throw new NotImplementedException();
+		}
+
+		private static ValueCondition ParseOperator(string condition, string operatorName, int index) {
+			Console.WriteLine("parsing operator "+operatorName);
+			string attributeName = null;
+			if (index > 0) {
+				attributeName = condition.Substring(0, index);
+				if (!attributeName.StartsWith("@"))
+					throw new InvalidDataException();
+
+				attributeName = attributeName.Substring(1); // remove @
+			}
+
+			Console.WriteLine("attribute name: "+attributeName);
+
+			var value = condition.Substring(index + operatorName.Length);
+			var expr = Parser.ParseString(value);
+			if (!(expr is LiteralExpression))
+				throw new InvalidDataException();
+			var sdf = Builder.Build(expr);
+			OperatorCondition operatorCondition;
+
+			switch (operatorName) {
+				case "=": case "!=":
+					// common operators
+					operatorCondition = new CommonOperatorCondition(operatorName, sdf);
+				break;
+
+				case ">": case "<": case ">=": case "<=":
+					// number operators
+					if (!(sdf is NumberLiteral))
+						throw new InvalidDataException();
+
+					operatorCondition = new NumberOperatorCondition(operatorName, (NumberLiteral) sdf);
+				break;
+
+				case "~=": case "^=": case "$=": case "!~=": case "!^=": case "!$=":
+					// string operators
+					if (!(sdf is StringLiteral))
+						throw new InvalidDataException();
+
+					operatorCondition = new StringOperatorCondition(operatorName, (StringLiteral)sdf);
+				break;
+
+				default:
+					throw new InvalidDataException();
+			}
+
+			if (attributeName != null)
+				return new AttributeValueCondition(attributeName, operatorCondition);
+
+			return new NodeValueCondition(operatorCondition);
+		}
+	}
+
+	internal class OperatorCondition {
+		public virtual bool MeetsCondition(SDF value) {
+			throw new NotImplementedException();
+		}
+	}
+
+	internal class CommonOperatorCondition: OperatorCondition {
+		private readonly string _operatorName;
+		private readonly SDF _value;
+
+		public CommonOperatorCondition(string operatorName, SDF value) {
+			_operatorName = operatorName;
+			_value = value;
+		}
+
+		private bool MeetsOperator(SDF value, string operatorName) {
+			switch (operatorName) {
+				case "=":
+					var aString = _value as StringLiteral;
+					var bString = value as StringLiteral;
+					if (aString != null && bString != null)
+						return aString.Value == bString.Value;
+
+					var aNumber = _value as NumberLiteral;
+					var bNumber = value as NumberLiteral;
+					if (aNumber != null && bNumber != null)
+						return aNumber.Integer == bNumber.Integer && aNumber.Fraction == bNumber.Fraction;
+
+					var aBoolean = _value as BooleanLiteral;
+					var bBoolean = value as BooleanLiteral;
+					if (aBoolean != null && bBoolean != null)
+						return aBoolean.Value == bBoolean.Value;
+
+					if (_value is NullLiteral && value is NullLiteral)
+						return true;
+
+					return false;
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		private bool SameType(SDF v) {
+			if (_value is StringLiteral && v is StringLiteral)
+				return true;
+
+			if (_value is NumberLiteral && v is NumberLiteral)
+				return true;
+
+			if (_value is BooleanLiteral && v is BooleanLiteral)
+				return true;
+
+			if (_value is NullLiteral && v is NullLiteral)
+				return true;
+
+			return false;
+		}
+
+		public override bool MeetsCondition(SDF value) {
+			switch (_operatorName) {
+				case "=":
+					return MeetsOperator(value, "=");
+
+				case "!=":
+					return !MeetsOperator(value, "=") && SameType(value); // so !=3 wouldn't produce nodes, strings, etc
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+	}
+
+	internal class NumberOperatorCondition: OperatorCondition {
+		private readonly string _operatorName;
+		private readonly NumberLiteral _value;
+
+		public NumberOperatorCondition(string operatorName, NumberLiteral value) {
+			_operatorName = operatorName;
+			_value = value;
+		}
+
+		public override bool MeetsCondition(SDF value) {
+			var aNumber = value as NumberLiteral;
+			if (aNumber == null)
+				return false;
+
+			var a = aNumber.Double;
+			var b = _value.Double;
+
+			switch (_operatorName) {
+				case "<": return a < b;
+				case ">": return a > b;
+				case "<=": return a <= b || (_value.Integer == aNumber.Integer && _value.Fraction == aNumber.Fraction); // just in case
+				case ">=": return a >= b || (_value.Integer == aNumber.Integer && _value.Fraction == aNumber.Fraction);
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+	}
+
+	internal class StringOperatorCondition: OperatorCondition {
+		private readonly string _operatorName;
+		private readonly StringLiteral _value;
+
+		public StringOperatorCondition(string operatorName, StringLiteral value) {
+			_operatorName = operatorName;
+			_value = value;
+		}
+
+		private bool MeetsOperator(string a, string operatorName) {
+			var b = _value.Value;
+			switch (operatorName) {
+				case "~=": return a.Contains(b);
+				case "^=": return a.StartsWith(b);
+				case "$=": return a.EndsWith(b);
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+
+		public override bool MeetsCondition(SDF value) {
+			var a = value as StringLiteral;
+			if (a == null)
+				return false;
+
+			switch (_operatorName) {
+				case "~=": case "^=": case "$=":
+					return MeetsOperator(a.Value, _operatorName);
+
+				case "!~=": case "!^=": case "!$=":
+					return !MeetsOperator(a.Value, _operatorName.Substring(1));
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+	}
+
+	internal class NodeValueCondition: ValueCondition {
+		private readonly OperatorCondition _operatorCondition;		
+
+		public NodeValueCondition(OperatorCondition operatorCondition) {
+			_operatorCondition = operatorCondition;
+		}
+
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+			return attrbuteName == null && _operatorCondition.MeetsCondition(sdf);
+		}
+	}
+
+	internal class AttributeValueCondition: ValueCondition {
+		private readonly string _attributeName;
+		private readonly OperatorCondition _operatorCondition;
+
+		public AttributeValueCondition(string attributeName, OperatorCondition operatorCondition) {
+			_attributeName = attributeName;
+			_operatorCondition = operatorCondition;
+		}
+
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+			return attrbuteName == _attributeName && _operatorCondition.MeetsCondition(sdf);
+		}
+	}
 }

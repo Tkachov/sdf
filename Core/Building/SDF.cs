@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,6 +45,7 @@ namespace sdf.Core.Building {
 	
 	public class NumberLiteral: SDF {
 		internal long Integer, Fraction;
+		public double Double => double.Parse(Integer + CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator + Fraction); // yeah, dumb, I know
 
 		public NumberLiteral(long a, long b) {
 			Integer = a;
