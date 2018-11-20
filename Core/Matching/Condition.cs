@@ -1,44 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using sdf.Core.Building;
 using sdf.Core.Parsing;
-using Expression = System.Linq.Expressions.Expression;
 
 namespace sdf.Core.Matching {
-	/*
-	/html/body 				Абсолютный путь от корня
-	body/p					Относительный путь
-	/html 					Узел html.
-	/html/ 					Все потомки узла html (фактически, после / идет пустой список ограничений на искомые узлы).
-	node/@attr/attr-node 	Обращение к иерархии внутри атрибута attr узла node.
-
-	body/* /b
-	body/+/b				Путь с переменной вложенностью(аналогично PCRE, * это 0 и более, + это 1 и более).
-							Вложенность может быть в том числе через узлы-атрибуты(body/@attr/b).
-
-	node/#0 				Обращение к узлу по порядковому номеру.
-	node/inner@0 			Обращение к указанному по счету узлу с указанным именем(возможно, стоит расширить на произвольные условия).
-							Пояснение: h1#1 дает элемент h1, который является вторым в списке потомков, h1@1 дает второй элемент h1 (даже если в списке потомков он находится, например, на десятом месте).
-
-	node/^n					Обращение к узлам с указанным типом(n — number, s — string, b — boolean, ? — node, ? — null).
-	node/[>2]
-							Условие на значение узла.В зависимости от типа узла применимы разные условия:
-
-Для чисел: >, <, >=, <=, =, !=;
-	Для строк: =, !=, ~=, ^=, $= (имеет подстроку, начинается с подстроки, заканчивается подстрокой);
-    Для строк, вероятно, стоит также добавить версии-отрицания !~=, !^=, !$=;
-    Для булевых значений и null: =, !=;
-    Для узлов: условия на значения атрибутов(см.ниже), предикаты вида has_child(childname), has_attr(attrname).
-
-node[@attr>2] Условие на значение атрибута узла.
-node/@attr[>2] Условие на значение узла, являющегося значением атрибута.Выглядит похоже на предыдущее, однако происходит выбор не узла node, а узла-значения attr, в данном случае — числовых значений, больших 2.
-
-	*/
-
 	internal class Condition {
 		public virtual bool Matches(SDF sdf, SDF parent, string attrbuteName) {
 			throw new NotImplementedException();
@@ -187,13 +153,9 @@ node/@attr[>2] Условие на значение узла, являющего
 					throw new ArgumentOutOfRangeException();
 			}
 		}
-	}
-
-	// TODO: node/attribute value predicate conditions
+	}	
 
 	internal class ValueCondition: Condition {
-		internal ValueCondition() {}
-
 		public static ValueCondition Parse(string condition) {
 			// condition: attribute-condition | value-condition
 			// attribute-condition: attribute-name attribute-value-condition | attribute-node-condition
@@ -214,8 +176,6 @@ node/@attr[>2] Условие на значение узла, являющего
 			// attribute-name: @ name
 			// unary-function-name: one-of(has_child has_attr)
 			// binary-function-name: one-of(attr_has_child attr_has_attr)
-
-			Console.WriteLine(condition);
 
 			string[] nodeFunctions = {"has_child", "has_attr"};
 			string[] attrFunctions = {"attr_has_child", "attr_has_attr"};
@@ -240,17 +200,55 @@ node/@attr[>2] Условие на значение узла, являющего
 		}		
 
 		private static NodeValueCondition ParseNodeFunction(string condition, string functionName) {
-			Console.WriteLine("parsing node function "+functionName);
-			throw new NotImplementedException();
+			var firstBrace = condition.IndexOf("(", functionName.Length);
+			if (firstBrace == -1)
+				throw new InvalidDataException();
+
+			var secondBrace = condition.IndexOf(")", firstBrace);
+			if (secondBrace == -1)
+				throw new InvalidDataException();
+
+			var args = condition.Substring(firstBrace + 1, secondBrace - firstBrace - 1);
+			var expr = Parser.ParseString(args);
+			var literal = expr as LiteralExpression;
+			if (literal == null || literal.Type != LiteralType.Keyword)
+				throw new InvalidDataException();
+			
+			return new NodeValueCondition(new NodeOperatorCondition(functionName, literal.Value));
 		}
 
 		private static AttributeValueCondition ParseAttributeFunction(string condition, string functionName) {
-			Console.WriteLine("parsing attribute function "+functionName);
-			throw new NotImplementedException();
+			var firstBrace = condition.IndexOf("(", functionName.Length);
+			if (firstBrace == -1)
+				throw new InvalidDataException();
+
+			var secondBrace = condition.IndexOf(")", firstBrace);
+			if (secondBrace == -1)
+				throw new InvalidDataException();
+
+			var args = condition.Substring(firstBrace, secondBrace - firstBrace + 1).Replace(",", " ");
+			var expr = Parser.ParseString(args);
+			var list = expr as ListExpression;
+			if (list == null || list.Type != ListBracketsType.Round || list.Contents.Count != 2)
+				throw new InvalidDataException();
+
+			var first = list.Contents[0];
+			var second = list.Contents[1];
+			var firstLiteral = first as LiteralExpression;
+			var secondLiteral = second as LiteralExpression;
+			if (firstLiteral == null || firstLiteral.Type != LiteralType.Keyword || secondLiteral == null || secondLiteral.Type != LiteralType.Keyword)
+				throw new InvalidDataException();
+
+			var attributeName = firstLiteral.Value;
+			if (!attributeName.StartsWith("@"))
+				throw new InvalidDataException();
+			attributeName = attributeName.Substring(1); // remove @
+
+			functionName = functionName.Substring(5); // remove "attr_"
+            return new AttributeValuePredicateCondition(attributeName, new NodeOperatorCondition(functionName, secondLiteral.Value));
 		}
 
 		private static ValueCondition ParseOperator(string condition, string operatorName, int index) {
-			Console.WriteLine("parsing operator "+operatorName);
 			string attributeName = null;
 			if (index > 0) {
 				attributeName = condition.Substring(0, index);
@@ -259,8 +257,6 @@ node/@attr[>2] Условие на значение узла, являющего
 
 				attributeName = attributeName.Substring(1); // remove @
 			}
-
-			Console.WriteLine("attribute name: "+attributeName);
 
 			var value = condition.Substring(index + operatorName.Length);
 			var expr = Parser.ParseString(value);
@@ -443,6 +439,33 @@ node/@attr[>2] Условие на значение узла, являющего
 		}
 	}
 
+	internal class NodeOperatorCondition: OperatorCondition {
+		private readonly string _operatorName;
+		private readonly string _name;
+
+		public NodeOperatorCondition(string operatorName, string name) {
+			_operatorName = operatorName;
+			_name = name;
+		}
+
+		public override bool MeetsCondition(SDF value) {
+			var a = value as Node;
+			if (a == null)
+				return false;
+
+			switch (_operatorName) {
+				case "has_child":
+					return a.Children.OfType<Node>().Any(node => node.Name == _name);
+
+				case "has_attr":
+					return a.Attributes.ContainsKey(_name);
+
+				default:
+					throw new ArgumentOutOfRangeException();
+			}
+		}
+	}
+
 	internal class NodeValueCondition: ValueCondition {
 		private readonly OperatorCondition _operatorCondition;		
 
@@ -451,21 +474,40 @@ node/@attr[>2] Условие на значение узла, являющего
 		}
 
 		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
-			return attrbuteName == null && _operatorCondition.MeetsCondition(sdf);
+			return _operatorCondition.MeetsCondition(sdf);
 		}
 	}
 
 	internal class AttributeValueCondition: ValueCondition {
-		private readonly string _attributeName;
-		private readonly OperatorCondition _operatorCondition;
+		internal readonly string AttributeName;
+		internal readonly OperatorCondition OperatorCondition;
 
 		public AttributeValueCondition(string attributeName, OperatorCondition operatorCondition) {
-			_attributeName = attributeName;
-			_operatorCondition = operatorCondition;
+			AttributeName = attributeName;
+			OperatorCondition = operatorCondition;
 		}
 
 		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
-			return attrbuteName == _attributeName && _operatorCondition.MeetsCondition(sdf);
+			return attrbuteName == AttributeName && OperatorCondition.MeetsCondition(sdf);
+		}
+	}
+
+	internal class AttributeValuePredicateCondition: AttributeValueCondition {
+		public AttributeValuePredicateCondition(string attributeName, OperatorCondition operatorCondition):
+			base(attributeName, operatorCondition) {}
+
+		public override bool Matches(SDF sdf, SDF parent, string attrbuteName) {
+			// point of "attr_" predicates is that we select a node,
+			// which has an attribute with given name and this attribute meets a certain condition
+			var node = sdf as Node;
+			if (node == null)
+				return false;
+
+			if (!node.Attributes.ContainsKey(AttributeName))
+				return false;
+
+			var attr = node.Attributes[AttributeName];
+			return OperatorCondition.MeetsCondition(attr);
 		}
 	}
 }
