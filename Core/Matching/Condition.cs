@@ -115,7 +115,7 @@ node/@attr[>2] Условие на значение узла, являющего
 			var number = 0;
 			foreach (var child in parentNode.Children) {
 				if ((child as Node)?.Name == name) {
-					if (child == sdf)
+					if (child == sdf && number == Number)
 						return true;
 					++number;
 				}
