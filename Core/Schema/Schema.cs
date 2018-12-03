@@ -443,39 +443,39 @@ namespace sdf.Core.Schema {
 			return new SchemaNodeTypeAttribute(n, MakeElement(children[0]));
 		}
 
-		public bool Verify(SDF input) { // sets ErrorMessage if returns false
+		public bool Validate(SDF input) { // sets ErrorMessage if returns false
 			var e = topElement;
-			return VerifyMatches(e, input);
+			return ValidateMatches(e, input);
 		}
 
-		private bool VerifyMatches(SchemaElement schemaElement, SDF input) {
+		private bool ValidateMatches(SchemaElement schemaElement, SDF input) {
 			var n = schemaElement as SchemaNodeElement;
-			if (n != null) return VerifyMatchesNodeElement(n, input);
+			if (n != null) return ValidateMatchesNodeElement(n, input);
 
 			var l = schemaElement as SchemaLiteralElement;
-			if (l != null) return VerifyMatchesLiteralElement(l, input);
+			if (l != null) return ValidateMatchesLiteralElement(l, input);
 
 			var ls = schemaElement as SchemaListElement;
-			if (ls != null) return VerifyMatchesListElement(ls, input);
+			if (ls != null) return ValidateMatchesListElement(ls, input);
 
 			var s = schemaElement as SchemaSequenceElement;
-			if (s != null) return VerifyMatchesSequenceElement(s, input);
+			if (s != null) return ValidateMatchesSequenceElement(s, input);
 
 			var o = schemaElement as SchemaOneOfElement;
-			if (o != null) return VerifyMatchesOneOfElement(o, input);
+			if (o != null) return ValidateMatchesOneOfElement(o, input);
 
-			ErrorMessage = "Unknown element type in VerifyMatches.";
+			ErrorMessage = "Unknown element type in ValidateMatches.";
 			return false;
 		}
 
-		private bool VerifyMatches(SchemaElement schemaElement, List<SDF> input) {
+		private bool ValidateMatches(SchemaElement schemaElement, List<SDF> input) {
 			var n = schemaElement as SchemaNodeElement;
 			if (n != null) {
 				if (input.Count != 1) {
 					ErrorMessage = "One node expected, multiple (or none) found.";
 					return false;
 				}
-				return VerifyMatchesNodeElement(n, input[0]);
+				return ValidateMatchesNodeElement(n, input[0]);
 			}
 
 			var l = schemaElement as SchemaLiteralElement;
@@ -484,26 +484,26 @@ namespace sdf.Core.Schema {
 					ErrorMessage = "One literal expected, multiple (or none) found.";
 					return false;
 				}
-				return VerifyMatchesLiteralElement(l, input[0]);
+				return ValidateMatchesLiteralElement(l, input[0]);
 			}
 
 			var ls = schemaElement as SchemaListElement;
 			if (ls != null)
-				return VerifyMatchesListElement(ls, input);
+				return ValidateMatchesListElement(ls, input);
 
 			var s = schemaElement as SchemaSequenceElement;
 			if (s != null)
-				return VerifyMatchesSequenceElement(s, input);
+				return ValidateMatchesSequenceElement(s, input);
 
 			var o = schemaElement as SchemaOneOfElement;
 			if (o != null)
-				return VerifyMatchesOneOfElement(o, input);
+				return ValidateMatchesOneOfElement(o, input);
 
-			ErrorMessage = "Unknown element type in VerifyMatches.";
+			ErrorMessage = "Unknown element type in ValidateMatches.";
 			return false;
 		}
 
-		private bool VerifyMatchesNodeElement(SchemaNodeElement schemaNodeElement, SDF input) {
+		private bool ValidateMatchesNodeElement(SchemaNodeElement schemaNodeElement, SDF input) {
 			var n = input as Node;
 			if (n == null || n.Name != schemaNodeElement.Name) {
 				ErrorMessage = "Element '"+Match.MakeRootMatch(input).Path+"' must be a ("+schemaNodeElement.Name+") node.";
@@ -521,7 +521,7 @@ namespace sdf.Core.Schema {
 			}
 
 			if (nt.Children != null) {
-				if (!VerifyMatches(nt.Children, n.Children))
+				if (!ValidateMatches(nt.Children, n.Children))
 					return false;
 			}
 
@@ -536,13 +536,13 @@ namespace sdf.Core.Schema {
 				}
 
 				var a = n.Attributes[attribute.Name];
-				if (!VerifyMatches(attribute.Element, a))
+				if (!ValidateMatches(attribute.Element, a))
 					return false;
 			}
 			return true;
 		}
 
-		private bool VerifyMatchesLiteralElement(SchemaLiteralElement schemaLiteralElement, SDF input) {
+		private bool ValidateMatchesLiteralElement(SchemaLiteralElement schemaLiteralElement, SDF input) {
 			if (input is Node) {
 				ErrorMessage = "Element '"+Match.MakeRootMatch(input).Path+"' must be literal.";
 				return false;
@@ -550,10 +550,10 @@ namespace sdf.Core.Schema {
 
 			var t = types[schemaLiteralElement.TypeName];
 			if (t is SchemaBuiltinType) {
-				if (!VerifyMatchesType(t as SchemaBuiltinType, input)) return false;
+				if (!ValidateMatchesType(t as SchemaBuiltinType, input)) return false;
 			} else if (t is SchemaLiteralType) {
 				var lt = t as SchemaLiteralType;
-				if (!VerifyMatchesType(lt.BaseType, input))
+				if (!ValidateMatchesType(lt.BaseType, input))
 					return false;
 
 				// TODO: conditions (/*cnd*/)
@@ -565,7 +565,7 @@ namespace sdf.Core.Schema {
 			return true;
 		}
 
-		private bool VerifyMatchesType(SchemaBuiltinType schemaType, SDF input) {
+		private bool ValidateMatchesType(SchemaBuiltinType schemaType, SDF input) {
 			if (schemaType is SchemaStringType) {
 				if (!(input is StringLiteral)) {
 					ErrorMessage = "String expected.";
@@ -591,12 +591,12 @@ namespace sdf.Core.Schema {
 			return true;
 		}
 
-		private bool VerifyMatchesListElement(SchemaListElement ls, SDF input) { // no lists or sequences
+		private bool ValidateMatchesListElement(SchemaListElement ls, SDF input) { // no lists or sequences
 			var l = new List<SDF> {input};
-			return VerifyMatchesListElement(ls, l);
+			return ValidateMatchesListElement(ls, l);
 		}
 
-		private bool VerifyMatchesListElement(SchemaListElement ls, List<SDF> input) {
+		private bool ValidateMatchesListElement(SchemaListElement ls, List<SDF> input) {
 			var l = input.Count;
 			if (ls.Min > l) {
 				ErrorMessage = "";
@@ -609,23 +609,23 @@ namespace sdf.Core.Schema {
 			}
 
 			foreach (var sdf in input) {
-				if (!VerifyMatches(ls.Element, sdf))
+				if (!ValidateMatches(ls.Element, sdf))
 					return false;
 			}
 
 			return true;
 		}
 
-		private bool VerifyMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, SDF input) { // no sequences
+		private bool ValidateMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, SDF input) { // no sequences
 			if (schemaSequenceElement.Sequence.Count > 1) {
 				ErrorMessage = "A sequence of " + schemaSequenceElement.Sequence.Count + " elements expected, one element found.";
 				return false;
 			}
 
-			return VerifyMatches(schemaSequenceElement.Sequence[0], input);
+			return ValidateMatches(schemaSequenceElement.Sequence[0], input);
 		}
 
-		private bool VerifyMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, List<SDF> input) {
+		private bool ValidateMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, List<SDF> input) {
 			int l = schemaSequenceElement.Sequence.Count;
 			if (input.Count != l) {
 				ErrorMessage = "A sequence of " + l + " elements expected, " + input.Count + " element(s) found.";
@@ -633,16 +633,16 @@ namespace sdf.Core.Schema {
 			}
 
 			for (int i = 0; i < l; ++i) {
-				if (!VerifyMatches(schemaSequenceElement.Sequence[i], input[i]))
+				if (!ValidateMatches(schemaSequenceElement.Sequence[i], input[i]))
 					return false;
 			}
 
 			return true;
 		}
 
-		private bool VerifyMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, SDF input) { // only nodes and literals
+		private bool ValidateMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, SDF input) { // only nodes and literals
 			foreach (var option in schemaOneOfElement.Options) {
-				if (VerifyMatches(option, input))
+				if (ValidateMatches(option, input))
 					return true;
 			}
 
@@ -650,9 +650,9 @@ namespace sdf.Core.Schema {
 			return false;
 		}
 
-		private bool VerifyMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, List<SDF> input) {
+		private bool ValidateMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, List<SDF> input) {
 			foreach (var option in schemaOneOfElement.Options) {
-				if (VerifyMatches(option, input))
+				if (ValidateMatches(option, input))
 					return true;
 			}
 
