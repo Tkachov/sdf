@@ -44,7 +44,7 @@ namespace sdf {
 				var schema = new Schema(data);
 
 				Console.WriteLine();
-				var res = schema.Verify(input);
+				var res = schema.Validate(input);
 				if (!res) Console.WriteLine(schema.ErrorMessage);
 				else Console.WriteLine("data matches schema");
 			

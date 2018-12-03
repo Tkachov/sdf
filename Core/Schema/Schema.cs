@@ -157,13 +157,13 @@ namespace sdf.Core.Schema {
 	class SchemaNodeType: SchemaType {
 		public readonly string Name;
 		public SchemaElement Children { get; private set; }
-		private SchemaTypeCondition conditions;
+		public SchemaTypeCondition Conditions { get; private set; }
 		public List<SchemaNodeTypeAttribute> Attributes { get; private set; }
 
 		public SchemaNodeType(Node n, SchemaElement children, SchemaTypeCondition conditions, List<SchemaNodeTypeAttribute> attributes) {
 			Name = "ud:" + n.GetStringAttribute("name");
 			this.Children=children;
-			this.conditions=conditions;
+			this.Conditions=conditions;
 			this.Attributes=attributes;
 		}
 	}
@@ -171,7 +171,7 @@ namespace sdf.Core.Schema {
 	class SchemaLiteralType: SchemaType {
 		public readonly string Name;
 		public SchemaBuiltinType BaseType { get; private set; }
-		private SchemaTypeCondition conditions;
+		public SchemaTypeCondition Conditions { get; private set; }
 
 		public SchemaLiteralType(Node n, Dictionary<string, SchemaBuiltinType> builtinTypes, SchemaTypeCondition conditions) {
 			Name = "ud:" + n.GetStringAttribute("name");
@@ -179,7 +179,7 @@ namespace sdf.Core.Schema {
 			if (!builtinTypes.ContainsKey(bt))
 				throw new InvalidDataException("Unknown built-in type '"+bt+"' used in literal-type description.");
 			BaseType = builtinTypes[bt];
-			this.conditions=conditions;
+			this.Conditions=conditions;
 		}
 	}
 
@@ -187,26 +187,40 @@ namespace sdf.Core.Schema {
 	}
 
 	class SchemaTypeSingleCondition: SchemaTypeCondition {
-		private string condition;
+		public string RawCondition { get; private set; }
+		public ValueCondition Condition { get; private set; }
 
 		public SchemaTypeSingleCondition(StringLiteral s) {
-			condition = s.Value;
+			RawCondition = s.Value;
+
+			var cp = new ConditionParser("[" + RawCondition + "]");
+			var cnd = cp.Parse();
+			if (cnd.Count != 1) {
+				throw new InvalidDataException("Invalid condition '"+RawCondition+"'.");
+			}
+
+			var c0 = cnd[0] as ValueCondition;
+			if (c0 == null) {
+				throw new InvalidDataException("Invalid condition '"+RawCondition+"'.");
+			}
+
+			Condition = c0;
 		}
 	}
 
 	class SchemaTypeOneOfConditions: SchemaTypeCondition {
-		private List<SchemaTypeCondition> conditions;
+		public List<SchemaTypeCondition> Conditions { get; private set; }
 
 		public SchemaTypeOneOfConditions(List<SchemaTypeCondition> conditions) {
-			this.conditions=conditions;
+			Conditions=conditions;
 		}
 	}
 
 	class SchemaTypeAllOfConditions: SchemaTypeCondition {
-		private List<SchemaTypeCondition> conditions;
+		public List<SchemaTypeCondition> Conditions { get; private set; }
 
 		public SchemaTypeAllOfConditions(List<SchemaTypeCondition> conditions) {
-			this.conditions=conditions;
+			Conditions=conditions;
 		}
 	}
 
@@ -445,30 +459,30 @@ namespace sdf.Core.Schema {
 
 		public bool Validate(SDF input) { // sets ErrorMessage if returns false
 			var e = topElement;
-			return ValidateMatches(e, input);
+			return ValidateMatches(e, Match.MakeRootMatch(input));
 		}
 
-		private bool ValidateMatches(SchemaElement schemaElement, SDF input) {
+		private bool ValidateMatches(SchemaElement schemaElement, Match input, string attributeName=null) {
 			var n = schemaElement as SchemaNodeElement;
-			if (n != null) return ValidateMatchesNodeElement(n, input);
+			if (n != null) return ValidateMatchesNodeElement(n, input, attributeName);
 
 			var l = schemaElement as SchemaLiteralElement;
-			if (l != null) return ValidateMatchesLiteralElement(l, input);
+			if (l != null) return ValidateMatchesLiteralElement(l, input, attributeName);
 
 			var ls = schemaElement as SchemaListElement;
-			if (ls != null) return ValidateMatchesListElement(ls, input);
+			if (ls != null) return ValidateMatchesListElement(ls, input, attributeName);
 
 			var s = schemaElement as SchemaSequenceElement;
-			if (s != null) return ValidateMatchesSequenceElement(s, input);
+			if (s != null) return ValidateMatchesSequenceElement(s, input, attributeName);
 
 			var o = schemaElement as SchemaOneOfElement;
-			if (o != null) return ValidateMatchesOneOfElement(o, input);
+			if (o != null) return ValidateMatchesOneOfElement(o, input, attributeName);
 
 			ErrorMessage = "Unknown element type in ValidateMatches.";
 			return false;
 		}
 
-		private bool ValidateMatches(SchemaElement schemaElement, List<SDF> input) {
+		private bool ValidateMatches(SchemaElement schemaElement, List<Match> input) {
 			var n = schemaElement as SchemaNodeElement;
 			if (n != null) {
 				if (input.Count != 1) {
@@ -503,10 +517,10 @@ namespace sdf.Core.Schema {
 			return false;
 		}
 
-		private bool ValidateMatchesNodeElement(SchemaNodeElement schemaNodeElement, SDF input) {
-			var n = input as Node;
+		private bool ValidateMatchesNodeElement(SchemaNodeElement schemaNodeElement, Match input, string attributeName=null) {
+			var n = input.Value as Node;
 			if (n == null || n.Name != schemaNodeElement.Name) {
-				ErrorMessage = "Element '"+Match.MakeRootMatch(input).Path+"' must be a ("+schemaNodeElement.Name+") node.";
+				ErrorMessage = "Element '"+input.Path+"' must be a ("+schemaNodeElement.Name+") node.";
 				return false;
 			}
 
@@ -520,43 +534,51 @@ namespace sdf.Core.Schema {
 				return false;
 			}
 
+			var mn = input as MatchNode;
+			if (mn == null) {
+				ErrorMessage = "Element '"+input.Path+"' is a node and it's Match is not?";
+				return false;
+			}
+
 			if (nt.Children != null) {
-				if (!ValidateMatches(nt.Children, n.Children))
+				if (!ValidateMatches(nt.Children, mn.Children))
 					return false;
 			}
 
-			// TODO: conditions (/*cnd*/)
+			if (!ValidateConditions(nt.Conditions, input, attributeName))
+				return false;
 
 			// attributes
 			foreach (var attribute in nt.Attributes) {
 				if (!n.Attributes.ContainsKey(attribute.Name)) {
 					if (!attribute.Required) continue;
-					ErrorMessage = "Required attribute '" + attribute.Name + "' is missing on element '" + Match.MakeRootMatch(input).Path + "'.";
+					ErrorMessage = "Required attribute '" + attribute.Name + "' is missing on element '" + input.Path + "'.";
 					return false;
 				}
 
-				var a = n.Attributes[attribute.Name];
-				if (!ValidateMatches(attribute.Element, a))
+				var a = mn.Attributes[attribute.Name];
+				if (!ValidateMatches(attribute.Element, a, attribute.Name))
 					return false;
 			}
 			return true;
 		}
 
-		private bool ValidateMatchesLiteralElement(SchemaLiteralElement schemaLiteralElement, SDF input) {
-			if (input is Node) {
-				ErrorMessage = "Element '"+Match.MakeRootMatch(input).Path+"' must be literal.";
+		private bool ValidateMatchesLiteralElement(SchemaLiteralElement schemaLiteralElement, Match input, string attributeName = null) {
+			if (input.Value is Node) {
+				ErrorMessage = "Element '"+input.Path+"' must be literal.";
 				return false;
 			}
 
 			var t = types[schemaLiteralElement.TypeName];
 			if (t is SchemaBuiltinType) {
-				if (!ValidateMatchesType(t as SchemaBuiltinType, input)) return false;
+				if (!ValidateMatchesType(t as SchemaBuiltinType, input, attributeName)) return false;
 			} else if (t is SchemaLiteralType) {
 				var lt = t as SchemaLiteralType;
-				if (!ValidateMatchesType(lt.BaseType, input))
+				if (!ValidateMatchesType(lt.BaseType, input, attributeName))
 					return false;
 
-				// TODO: conditions (/*cnd*/)
+				if (!ValidateConditions(lt.Conditions, input, attributeName))
+					return false;
 			} else {
 				ErrorMessage = "Bad type in schema.";
 				return false;
@@ -565,7 +587,60 @@ namespace sdf.Core.Schema {
 			return true;
 		}
 
-		private bool ValidateMatchesType(SchemaBuiltinType schemaType, SDF input) {
+		private bool ValidateConditions(SchemaTypeCondition conditions, Match input, string attributeName = null) {
+			if (conditions == null)
+				return true;
+
+			var allOf = conditions as SchemaTypeAllOfConditions;
+			if (allOf != null) {
+				foreach (var condition in allOf.Conditions) {
+					if (!ValidateConditions(condition, input, attributeName)) {
+						ErrorMessage = "One of the conditions is not met:\n\t" + ErrorMessage.Replace("\n", "\n\t");
+						return false;
+					}
+				}
+
+				return true;
+			}
+
+			var oneOf = conditions as SchemaTypeOneOfConditions;
+			if (oneOf != null) {
+				var found = false;
+				var fullMessage = "";
+				foreach (var condition in oneOf.Conditions) {
+					if (ValidateConditions(condition, input, attributeName)) {
+						found = true;
+						break;
+					}
+					fullMessage += "\t" + ErrorMessage.Replace("\n", "\n\t") + "\n";
+				}
+
+				if (!found) {
+					ErrorMessage = "None of the following multiple conditions is not met:\n" + fullMessage;
+					return false;
+				}
+
+				return true;
+			}
+
+			// ok, it's simple condition
+			var c = conditions as SchemaTypeSingleCondition;
+			if (c == null) {
+				ErrorMessage = "Unknown type of condition in ValidateConditions";
+				return false;
+			}
+
+			if (!c.Condition.Matches(input.Value, input.Parent?.Value, attributeName)) {
+				ErrorMessage = "Element '"+input.Path+"' does not match '"+c.RawCondition+"' condition.";
+				return false;
+			}
+			
+
+			return true;
+		}
+
+		private bool ValidateMatchesType(SchemaBuiltinType schemaType, Match match, string attributeName = null) {
+			var input = match.Value;
 			if (schemaType is SchemaStringType) {
 				if (!(input is StringLiteral)) {
 					ErrorMessage = "String expected.";
@@ -591,20 +666,20 @@ namespace sdf.Core.Schema {
 			return true;
 		}
 
-		private bool ValidateMatchesListElement(SchemaListElement ls, SDF input) { // no lists or sequences
-			var l = new List<SDF> {input};
+		private bool ValidateMatchesListElement(SchemaListElement ls, Match input, string attributeName = null) { // no lists or sequences
+			var l = new List<Match> {input};
 			return ValidateMatchesListElement(ls, l);
 		}
 
-		private bool ValidateMatchesListElement(SchemaListElement ls, List<SDF> input) {
+		private bool ValidateMatchesListElement(SchemaListElement ls, List<Match> input) {
 			var l = input.Count;
 			if (ls.Min > l) {
-				ErrorMessage = "";
+				ErrorMessage = "Less than minimal ("+ls.Min+") amount of elements in a list.";
 				return false;
 			}
 
-			if (ls.Limited && ls.Max < 1) {
-				ErrorMessage = "";
+			if (ls.Limited && ls.Max < l) {
+				ErrorMessage = "More than maximum ("+ls.Max+") amount of elements in a list.";
 				return false;
 			}
 
@@ -616,16 +691,16 @@ namespace sdf.Core.Schema {
 			return true;
 		}
 
-		private bool ValidateMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, SDF input) { // no sequences
+		private bool ValidateMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, Match input, string attributeName = null) { // no sequences
 			if (schemaSequenceElement.Sequence.Count > 1) {
 				ErrorMessage = "A sequence of " + schemaSequenceElement.Sequence.Count + " elements expected, one element found.";
 				return false;
 			}
 
-			return ValidateMatches(schemaSequenceElement.Sequence[0], input);
+			return ValidateMatches(schemaSequenceElement.Sequence[0], input, attributeName);
 		}
 
-		private bool ValidateMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, List<SDF> input) {
+		private bool ValidateMatchesSequenceElement(SchemaSequenceElement schemaSequenceElement, List<Match> input) {
 			int l = schemaSequenceElement.Sequence.Count;
 			if (input.Count != l) {
 				ErrorMessage = "A sequence of " + l + " elements expected, " + input.Count + " element(s) found.";
@@ -640,17 +715,20 @@ namespace sdf.Core.Schema {
 			return true;
 		}
 
-		private bool ValidateMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, SDF input) { // only nodes and literals
+		private bool ValidateMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, Match input, string attributeName = null) { // only nodes and literals
+			var fullMessage = "";
 			foreach (var option in schemaOneOfElement.Options) {
-				if (ValidateMatches(option, input))
+				if (ValidateMatches(option, input, attributeName))
 					return true;
+
+				fullMessage += "\t" + ErrorMessage.Replace("\n", "\n\t") + "\n";
 			}
 
-			ErrorMessage = "Element does not match neither of allowed options.";
+			ErrorMessage = "Element '"+input.Path+"' does not match neither of allowed options:\n" + fullMessage;
 			return false;
 		}
 
-		private bool ValidateMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, List<SDF> input) {
+		private bool ValidateMatchesOneOfElement(SchemaOneOfElement schemaOneOfElement, List<Match> input) {
 			foreach (var option in schemaOneOfElement.Options) {
 				if (ValidateMatches(option, input))
 					return true;
