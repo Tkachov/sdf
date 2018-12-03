@@ -739,3 +739,96 @@ namespace sdf.Core.Schema {
 		}
 	}
 }
+
+/*
+# schema of valid schema
+
+(schema {top-element (node-element {name "schema" type "schema-type"})} [	
+	(node-type {name "schema-type" children (list (one-of [
+		(node-element {name "node-type" type "node-type-type"})
+		(node-element {name "literal-type" type "literal-type-type"})
+	]))} [
+		(attribute {name "top-element" required true} (one-of [
+			(node-element {name "node-element" type "node-element-type"})
+			(node-element {name "literal-element" type "literal-element-type"})
+			(node-element {name "one-of" type "one-of-type"})
+		]))
+	])
+
+	(node-type {name "node-type-type" children (list (node-element {name "attribute" type="attribute-type"}))} [
+		(attribute {name "name" required true} (literal-element {type "string"}))
+		(attribute {name "children" required false} (one-of [
+			(node-element {name "node-element" type "node-element-type"})
+			(node-element {name "literal-element" type "literal-element-type"})
+			(node-element {name "sequence" type "sequence-type"})
+			(node-element {name "one-of" type "one-of-type"})
+			(node-element {name "list" type "list-type"})
+		]))
+		(attribute {name "conditions" required false} (one-of [
+			(node-element {name "condition" type "condition-type"})
+			(node-element {name "one-of-conditions" type "list-of-conditions-type"})
+			(node-element {name "all-of-conditions" type "list-of-conditions-type"})
+		]))
+	])
+	(node-type {name "literal-type-type"} [
+		(attribute {name "name" required true} (literal-element {type "string"}))
+		(attribute {name "base-type" required true} (literal-element {type "builtin-literal-type-name"}))
+		(attribute {name "conditions" required false} (one-of [
+			(node-element {name "condition" type "condition-type"})
+			(node-element {name "one-of-conditions" type "list-of-conditions-type"})
+			(node-element {name "all-of-conditions" type "list-of-conditions-type"})
+		]))
+	])
+
+	(literal-type {name "builtin-literal-type-name" base-type "string" conditions (one-of-conditions [
+		(condition "=\"null\"")
+		(condition "=\"bool\"")
+		(condition "=\"boolean\"")
+		(condition "=\"number\"")
+		(condition "=\"string\"")
+	])})
+
+	(node-type {name "node-element-type"} [
+		(attribute {name "name" required true} (literal-element {type "string"}))
+		(attribute {name "type" required false} (literal-element {type "string"}))
+	])
+	(node-type {name "literal-element-type"} [
+		(attribute {name "type" required true} (literal-element {type "string"}))
+	])
+	(node-type {name "sequence-type" children (list (one-of [
+		(node-element {name "node-element" type "node-element-type"})
+		(node-element {name "literal-element" type "literal-element-type"})
+		(node-element {name "one-of" type "one-of-type"})
+	]))})
+	(node-type {name "one-of-type" children (list (one-of [
+		(node-element {name "node-element" type "node-element-type"})
+		(node-element {name "literal-element" type "literal-element-type"})
+	]))})
+	(node-type {name "list-type" children (one-of [
+		(node-element {name "node-element" type "node-element-type"})
+		(node-element {name "literal-element" type "literal-element-type"})
+		(node-element {name "one-of" type "one-of-type"})
+	])} [
+		(attribute {name "min" required false} (literal-element {type "positive-number"}))
+		(attribute {name "max" required false} (literal-element {type "positive-number"}))
+	])
+
+	(literal-type {name "positive-number" base-type "number" conditions (condition ">=0")})
+
+	(node-type {name "condition-type" children (literal-element {type "string"})})
+	(node-type {name "list-of-conditions-type" children (list {min 1} (one-of [
+		(node-element {name "condition" type "condition-type"})
+		(node-element {name "one-of-conditions" type "list-of-conditions-type"})
+		(node-element {name "all-of-conditions" type "list-of-conditions-type"})
+	]))})
+
+	(node-type {name "attribute-type" children (one-of [
+		(node-element {name "node-element" type "node-element-type"})
+		(node-element {name "literal-element" type "literal-element-type"})
+		(node-element {name "one-of" type "one-of-type"})
+	])} [
+		(attribute {name "name" required true} (literal-element {type "string"}))
+		(attribute {name "required" required true} (literal-element {type "bool"}))
+	])
+])
+*/
