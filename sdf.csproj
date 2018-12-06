@@ -54,6 +54,7 @@
     <Compile Include="Core\Matching\Match.cs" />
     <Compile Include="Core\Matching\Matcher.cs" />
     <Compile Include="Core\Parsing\Expression.cs" />
+    <Compile Include="Core\Parsing\SdfStreamingParser.cs" />
     <Compile Include="Core\Parsing\Parser.cs" />
     <Compile Include="Core\Printer.cs" />
     <Compile Include="Core\Schema\Schema.cs" />
