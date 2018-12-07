@@ -22,6 +22,33 @@ namespace sdf.Core.Building {
 	*/
 
 	public abstract class SDF {
+		private SDF DeepCopy() {
+			var n = this as Node;
+			if (n != null) {
+				var atrs = new Dictionary<string, SDF>();
+				foreach (var kv in n.Attributes) {
+					atrs[kv.Key] = kv.Value.DeepCopy();
+				}
+
+				var chld = n.Children.Select(child => child.DeepCopy()).ToList();
+				return new Node(n.Name, atrs, chld);
+			}
+
+			var nl = this as NullLiteral;
+			if (nl != null) return new NullLiteral();
+
+			var nml = this as NumberLiteral;
+			if (nml != null) return new NumberLiteral(nml.Integer, nml.Fraction);
+
+			var bl = this as BooleanLiteral;
+			if (bl != null) return new BooleanLiteral(bl.Value);
+
+			var sl = this as StringLiteral;
+			if (sl != null) return new StringLiteral(sl.Value);
+
+			return null;
+		}
+
 		public List<Match> Find(string path) {
 			return Matcher.Match(this, path);
 		}
@@ -71,12 +98,12 @@ namespace sdf.Core.Building {
 
 				var index = parent.Children.IndexOf(oldValue);
 				if (index != -1) {
-					parent.Children[index] = newValue;
+					parent.Children[index] = newValue.DeepCopy();
 				} else { // not a child, then must be an attribute
 					var found = false;
 					foreach (var pair in parent.Attributes) {
 						if (pair.Value == oldValue) {
-							parent.Attributes[pair.Key] = newValue;
+							parent.Attributes[pair.Key] = newValue.DeepCopy();
 							found = true;
 							break;
 						}
@@ -101,7 +128,7 @@ namespace sdf.Core.Building {
 				if (node.Attributes.ContainsKey(attributeName))
 					throw new InvalidDataException("Cannot add an attribute, because attribute with such name already exists.");
 
-				node.Attributes[attributeName] = value;
+				node.Attributes[attributeName] = value.DeepCopy();
 			}
 		}
 		
@@ -112,7 +139,7 @@ namespace sdf.Core.Building {
 				if (node == null)
 					throw new InvalidDataException("Cannot add a child to something but a Node.");
 
-				node.Children.Add(value);
+				node.Children.Add(value.DeepCopy());
 			}
 		}
 
@@ -123,7 +150,7 @@ namespace sdf.Core.Building {
 				if (node == null)
 					throw new InvalidDataException("Cannot insert a child into something but a Node.");
 
-				node.Children.Insert(index, value);
+				node.Children.Insert(index, value.DeepCopy());
 			}
 		}
 
@@ -138,7 +165,7 @@ namespace sdf.Core.Building {
 				if (node == null)
 					throw new InvalidDataException("Cannot insert a child into something but a Node.");
 				
-				node.InsertBeforeChild(match.Value, value);
+				node.InsertBeforeChild(match.Value, value.DeepCopy());
 			}
 		}
 
@@ -152,7 +179,7 @@ namespace sdf.Core.Building {
 				if (node == null)
 					throw new InvalidDataException("Cannot insert a child into something but a Node.");
 
-				node.InsertAfterChild(match.Value, value);
+				node.InsertAfterChild(match.Value, value.DeepCopy());
 			}
 		}
 

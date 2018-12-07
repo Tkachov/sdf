@@ -110,7 +110,7 @@ namespace sdf.Core.Matching {
 				}
 			}
 
-			////////// DEBUG
+			/*//////// DEBUG
 			Console.WriteLine();
 			PrintPath(conditionsHierarchy);
 			Console.Write("/");
@@ -122,7 +122,7 @@ namespace sdf.Core.Matching {
 			Console.WriteLine(" - we're on:        " + (s is Node ? (s as Node).Name : "<literal>"));
 			Console.WriteLine(" - matches:         " + Matches(s, first, parent, attributeName));
 			Console.WriteLine();
-			//////////
+			////////*/
 
 			if (hasArbitrary && !arbitraryAtLeastOne) { // *
 				// try matching without this hierarchy level
