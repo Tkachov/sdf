@@ -231,7 +231,7 @@ namespace sdf.Core.Parsing {
 					// string
 					ReadNextCharacter();
 					var s = ReadStringLiteral();
-					Console.WriteLine("\tstring: " + s);
+					//Console.WriteLine("\tstring: " + s);
 					return new StringLiteral(s);
 				break;
 			}
@@ -239,7 +239,7 @@ namespace sdf.Core.Parsing {
 			if (CurrentCharacter == '-' || char.IsDigit((char)CurrentCharacter)) {
 				// number
 				var buffer = ReadUntilWhitespaceOnlyAllowedCharacters("-1234567890.");//ReadUntilWhitespaceOrOneOfCharacters("}])");
-				Console.WriteLine("\tnumber: " + buffer);
+				//Console.WriteLine("\tnumber: " + buffer);
 				var index = buffer.IndexOf('.');
 				if (index == -1)
 					return new NumberLiteral(long.Parse(buffer), 0);
@@ -257,12 +257,7 @@ namespace sdf.Core.Parsing {
 				SkipWhitespace();
 				tokens.Push(TokenType.NodeEnd);
 				tokens.Push(TokenType.NodeStart);
-				var nodename = "";
-				while (CurrentCharacter != null && !char.IsWhiteSpace((char) CurrentCharacter)) {
-					nodename += CurrentCharacter;
-					if (!ReadNextCharacter())
-						break; // TODO: unexpected eof
-				}
+				var nodename = ReadUntilWhitespaceOrOneOfCharacters(")");
 				sdfs.Push(new Node(nodename, new Dictionary<string, SDF>(), new List<SDF>()));
 				return;
 			} else {
@@ -413,6 +408,45 @@ namespace sdf.Core.Parsing {
 					throw new ArgumentOutOfRangeException();
 			}
 			return result;
+		}
+
+		public static SDF Parse(string filename) {
+			var p = new SdfStreamingParser(new StreamReader(filename, Encoding.UTF8));
+			while (!p.Ended && !p.HasError) {
+				var t = p.readNext();
+				if (t == TokenType.DocumentEnd)
+					break;
+			}
+
+			if (p.HasError) {
+				throw new InvalidDataException("Error while stream parsing the file:\n\t" + p.Error);
+			}
+
+			return p.Document;
+		}
+
+		public static SDF ParseAndVerifySchema(string filename, Schema.Schema schema) {
+			var p = new SdfStreamingParser(new StreamReader(filename, Encoding.UTF8));
+			while (!p.Ended && !p.HasError) {
+				var t = p.readNext();
+				if (t == TokenType.DocumentStart) continue;
+				if (t == TokenType.DocumentEnd) break;
+				if (t == TokenType.NodeEnd) {
+					if (!schema.ValidatePartial(p.Document)) {
+						throw new InvalidDataException("Document already does not match the schema:\n" + schema.ErrorMessage);
+					}
+				}
+			}
+
+			if (p.HasError) {
+				throw new InvalidDataException("Error while stream parsing the file:\n\t" + p.Error);
+			}
+
+			if (!schema.Validate(p.Document)) {
+				throw new InvalidDataException("File is read completely, but document does not match the schema:\n" + schema.ErrorMessage);
+			}
+
+			return p.Document;
 		}
 	}
 }

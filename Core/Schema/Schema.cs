@@ -236,7 +236,7 @@ namespace sdf.Core.Schema {
 		}
 	}
 
-	class Schema {
+	public class Schema {
 		private SchemaElement topElement;
 		private readonly Dictionary<string, SchemaBuiltinType> builtinTypes = new Dictionary<string, SchemaBuiltinType>();
 		private Dictionary<string, SchemaType> types = new Dictionary<string, SchemaType>();
@@ -735,6 +735,246 @@ namespace sdf.Core.Schema {
 			}
 
 			ErrorMessage = "Element does not match neither of allowed options.";
+			return false;
+		}
+
+		/////////////
+
+		public bool ValidatePartial(SDF input) { // sets ErrorMessage if returns false
+			var e = topElement;
+			return ValidateMatchesPartial(e, Match.MakeRootMatch(input));
+		}
+
+		private bool ValidateMatchesPartial(SchemaElement schemaElement, Match input, string attributeName = null) {
+			var n = schemaElement as SchemaNodeElement;
+			if (n != null)
+				return ValidateMatchesNodeElementPartial(n, input, attributeName);
+
+			var l = schemaElement as SchemaLiteralElement;
+			if (l != null)
+				return ValidateMatchesLiteralElement(l, input, attributeName); // cannot match literal partially, you either do or you don't
+
+			var ls = schemaElement as SchemaListElement;
+			if (ls != null)
+				return ValidateMatchesListElementPartial(ls, input, attributeName);
+
+			var s = schemaElement as SchemaSequenceElement;
+			if (s != null)
+				return ValidateMatchesSequenceElementPartial(s, input, attributeName);
+			
+			var o = schemaElement as SchemaOneOfElement;
+			if (o != null)
+				return ValidateMatchesOneOfElementPartial(o, input, attributeName);
+
+			ErrorMessage = "Unknown element type in ValidateMatches.";
+			return false;
+		}
+
+		private bool ValidateMatchesPartial(SchemaElement schemaElement, List<Match> input) {
+			var n = schemaElement as SchemaNodeElement;
+			if (n != null) {
+				if (input.Count > 1) {
+					ErrorMessage = "One node expected, multiple found.";
+					return false;
+				}
+				if (input.Count == 0) {
+					return true; // might be incomplete list yet
+				}
+				return ValidateMatchesNodeElementPartial(n, input[0]);
+			}
+
+			var l = schemaElement as SchemaLiteralElement;
+			if (l != null) {
+				if (input.Count > 1) {
+					ErrorMessage = "One literal expected, multiple found.";
+					return false;
+				}
+				if (input.Count == 0) {
+					return true; // might be incomplete list yet
+				}
+				return ValidateMatchesLiteralElement(l, input[0]); // cannot match literal partially
+			}
+
+			var ls = schemaElement as SchemaListElement;
+			if (ls != null)
+				return ValidateMatchesListElementPartial(ls, input);
+
+			var s = schemaElement as SchemaSequenceElement;
+			if (s != null)
+				return ValidateMatchesSequenceElementPartial(s, input);
+			
+			var o = schemaElement as SchemaOneOfElement;
+			if (o != null)
+				return ValidateMatchesOneOfElementPartial(o, input);
+
+			ErrorMessage = "Unknown element type in ValidateMatches.";
+			return false;
+		}
+
+		private bool ValidateMatchesNodeElementPartial(SchemaNodeElement schemaNodeElement, Match input, string attributeName = null) {
+			var n = input.Value as Node;
+			if (n == null || n.Name != schemaNodeElement.Name) {
+				ErrorMessage = "Element '"+input.Path+"' must be a ("+schemaNodeElement.Name+") node.";
+				return false;
+			}
+
+			var t = types[schemaNodeElement.TypeName];
+			if (t is SchemaSimpleNodeType)
+				return true;
+
+			var nt = t as SchemaNodeType;
+			if (nt == null) {
+				ErrorMessage = "Bad type in schema.";
+				return false;
+			}
+
+			var mn = input as MatchNode;
+			if (mn == null) {
+				ErrorMessage = "Element '"+input.Path+"' is a node and it's Match is not?";
+				return false;
+			}
+
+			if (nt.Children != null) {
+				if (!ValidateMatchesPartial(nt.Children, mn.Children))
+					return false;
+			}
+			
+			if (!ValidateConditionsPartial(nt.Conditions, input, attributeName))
+				return false;
+
+			// attributes
+			foreach (var attribute in nt.Attributes) {
+				if (!n.Attributes.ContainsKey(attribute.Name)) {
+					continue;
+				}
+
+				var a = mn.Attributes[attribute.Name];
+				if (!ValidateMatchesPartial(attribute.Element, a, attribute.Name))
+					return false;
+			}
+			return true;
+		}
+
+		private bool ValidateConditionsPartial(SchemaTypeCondition conditions, Match input, string attributeName = null) {
+			// need deeper analysis of conditions to determine whether conditions couldn't be met anymore
+			// for example, if we know that condition is ^string or ~="smth" (must be of type string) and SDF is a node, it cannot match anyhow
+			// but if condition is has_attr() and node is not completely parsed, we might meet the condition later
+			/*
+			if (conditions == null)
+				return true;
+
+			var allOf = conditions as SchemaTypeAllOfConditions;
+			if (allOf != null) {
+				foreach (var condition in allOf.Conditions) {
+					if (!ValidateConditionsPartial(condition, input, attributeName)) {
+						ErrorMessage = "One of the conditions is not met:\n\t" + ErrorMessage.Replace("\n", "\n\t");
+						return false;
+					}
+				}
+
+				return true;
+			}
+
+			var oneOf = conditions as SchemaTypeOneOfConditions;
+			if (oneOf != null) {
+				var found = false;
+				var fullMessage = "";
+				foreach (var condition in oneOf.Conditions) {
+					if (ValidateConditionsPartial(condition, input, attributeName)) {
+						found = true;
+						break;
+					}
+					fullMessage += "\t" + ErrorMessage.Replace("\n", "\n\t") + "\n";
+				}
+
+				if (!found) {
+					ErrorMessage = "None of the following multiple conditions is not met:\n" + fullMessage;
+					return false;
+				}
+
+				return true;
+			}
+
+			// ok, it's simple condition
+			var c = conditions as SchemaTypeSingleCondition;
+			if (c == null) {
+				ErrorMessage = "Unknown type of condition in ValidateConditions";
+				return false;
+			}
+
+			if (!c.Condition.Matches(input.Value, input.Parent?.Value, attributeName)) {
+				ErrorMessage = "Element '"+input.Path+"' does not match '"+c.RawCondition+"' condition.";
+				return false;
+			}
+			*/
+			return true;
+		}
+
+		private bool ValidateMatchesListElementPartial(SchemaListElement ls, Match input, string attributeName = null) { // no lists or sequences
+			var l = new List<Match> { input };
+			return ValidateMatchesListElementPartial(ls, l);
+		}
+
+		private bool ValidateMatchesListElementPartial(SchemaListElement ls, List<Match> input) {
+			var l = input.Count;
+			if (ls.Min > l) {
+				// less than minimal - OK, might be incomplete list
+			}
+
+			if (ls.Limited && ls.Max < l) {
+				ErrorMessage = "More than maximum ("+ls.Max+") amount of elements in a list.";
+				return false;
+			}
+
+			foreach (var sdf in input) {
+				if (!ValidateMatchesPartial(ls.Element, sdf))
+					return false;
+			}
+
+			return true;
+		}
+
+		private bool ValidateMatchesSequenceElementPartial(SchemaSequenceElement schemaSequenceElement, Match input, string attributeName = null) { // no sequences
+			// only one element found, but it could be the first in sequence,
+			// so check that it partially matches schema of first element in the sequence
+			return ValidateMatchesPartial(schemaSequenceElement.Sequence[0], input, attributeName);
+		}
+
+		private bool ValidateMatchesSequenceElementPartial(SchemaSequenceElement schemaSequenceElement, List<Match> input) {
+			int l = schemaSequenceElement.Sequence.Count;
+			if (input.Count > l) {
+				ErrorMessage = "A sequence of " + l + " elements expected, more (" + input.Count + ") elements found.";
+				return false;
+			}
+
+			for (int i = 0; i < input.Count; ++i) {
+				if (!ValidateMatchesPartial(schemaSequenceElement.Sequence[i], input[i]))
+					return false;
+			}
+
+			return true;
+		}
+
+		private bool ValidateMatchesOneOfElementPartial(SchemaOneOfElement schemaOneOfElement, Match input, string attributeName = null) { // only nodes and literals
+			var fullMessage = "";
+			foreach (var option in schemaOneOfElement.Options) {
+				if (ValidateMatchesPartial(option, input, attributeName))
+					return true;
+
+				fullMessage += "\t" + ErrorMessage.Replace("\n", "\n\t") + "\n";
+			}
+
+			ErrorMessage = "Element '"+input.Path+"' does not match neither of allowed options even partially:\n" + fullMessage;
+			return false;
+		}
+
+		private bool ValidateMatchesOneOfElementPartial(SchemaOneOfElement schemaOneOfElement, List<Match> input) {
+			foreach (var option in schemaOneOfElement.Options) {
+				if (ValidateMatchesPartial(option, input))
+					return true;
+			}
+
+			ErrorMessage = "Element does not match neither of allowed options even partially.";
 			return false;
 		}
 	}
