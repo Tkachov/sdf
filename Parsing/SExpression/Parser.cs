@@ -3,7 +3,12 @@ using System.IO;
 using System.Text;
 using JetBrains.Annotations;
 
-namespace sdf.Core.Parsing {
+namespace sdf.Parsing.SExpression {
+	/// <summary>
+	///     Simple S-Expression parser.
+	///     Parses given string or reads whole file into string to parse.
+	///     Returns only first S-Expression found.
+	/// </summary>
 	public sealed class Parser {
 		private readonly string _contents;
 		private int _position;
@@ -16,8 +21,13 @@ namespace sdf.Core.Parsing {
 			_position = 0;
 		}
 
-		private Parser([NotNull] TextReader streamReader): this(streamReader.ReadToEnd()) {}
+		private Parser([NotNull] TextReader streamReader) : this(streamReader.ReadToEnd()) { }
 
+		/// <summary>
+		///     Parse S-Expression written in a file <c>filename</c>.
+		/// </summary>
+		/// <param name="filename">Name of a file to read S-Expression from.</param>
+		/// <returns>Parsed S-Expression.</returns>
 		public static Expression Parse([NotNull] string filename) {
 			using (var streamReader = new StreamReader(filename, Encoding.UTF8)) {
 				var parser = new Parser(streamReader);
@@ -25,6 +35,11 @@ namespace sdf.Core.Parsing {
 			}
 		}
 
+		/// <summary>
+		///     Parse S-Expression written in a string <c>s</c>.
+		/// </summary>
+		/// <param name="s">String to read S-Expression from.</param>
+		/// <returns>Parsed S-Expression.</returns>
 		public static Expression ParseString([NotNull] string s) {
 			var parser = new Parser(s);
 			return parser.Parse();
@@ -52,21 +67,11 @@ namespace sdf.Core.Parsing {
 				result += CurrentCharacter;
 				MoveToNextCharacter();
 			}
+
 			return result;
 		}
 
 		// main methods
-
-		private struct ParserListType {
-			public readonly char OpenBrace, ClosedBrace;
-			public readonly ListBracketsType Type;
-
-			public ParserListType(char o, char c, ListBracketsType t) {
-				OpenBrace = o;
-				ClosedBrace = c;
-				Type = t;
-			}
-		}
 
 		private Expression ParseExpression() {
 			SkipWhitespace();
@@ -89,14 +94,18 @@ namespace sdf.Core.Parsing {
 			var contents = new List<Expression>();
 			while (true) {
 				SkipWhitespace();
-				if (EndOfFile)
+				if (EndOfFile) {
 					throw new InvalidDataException("Unexpected EOF while parsing list expression.");
+				}
+
 				if (CurrentCharacter == listEndingCharacter) {
 					MoveToNextCharacter();
 					break;
 				}
+
 				contents.Add(ParseExpression());
 			}
+
 			return new ListExpression(listType, contents);
 		}
 
@@ -148,6 +157,7 @@ namespace sdf.Core.Parsing {
 						default:
 							throw new InvalidDataException("Unknown escape sequence within string: \\" + CurrentCharacter);
 					}
+
 					continue;
 				}
 
@@ -159,11 +169,23 @@ namespace sdf.Core.Parsing {
 				result += CurrentCharacter;
 			}
 
-			if (EndOfFile)
+			if (EndOfFile) {
 				throw new InvalidDataException("Unexpected EOF while parsing string expression.");
+			}
 
 			MoveToNextCharacter();
 			return new LiteralExpression(LiteralType.String, result);
+		}
+
+		private struct ParserListType {
+			public readonly char OpenBrace, ClosedBrace;
+			public readonly ListBracketsType Type;
+
+			public ParserListType(char o, char c, ListBracketsType t) {
+				OpenBrace = o;
+				ClosedBrace = c;
+				Type = t;
+			}
 		}
 	}
 }

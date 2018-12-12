@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace sdf.Core.Matching {
-	enum TokenType {
+namespace sdf.Matching {
+	internal enum ConditionTokenType {
 		NodeName,
 		AttributeName,
 		NodeIndex,
@@ -14,40 +12,42 @@ namespace sdf.Core.Matching {
 		ValueCondition
 	}
 
-	class ConditionParser {
-		private string _full;
-		private int _position;
+	internal sealed class ConditionParser {
+		private readonly List<Condition> _conditions;
+		private readonly string _full;
 		private string _buffer;
-		private TokenType _currentlyParsing = TokenType.NodeName;
-		private List<Condition> conditions;
+		private ConditionTokenType _currentlyParsing = ConditionTokenType.NodeName;
+		private int _position;
 
-		public ConditionParser(string s) {
+		internal ConditionParser(string s) {
 			_full = s;
 			_position = 0;
 			_buffer = "";
-			conditions = new List<Condition>();
+			_conditions = new List<Condition>();
 		}
 
-		public List<Condition> Parse() {
-			while (_position < _full.Length)
+		internal List<Condition> Parse() {
+			while (_position < _full.Length) {
 				ParseChar();
+			}
+
 			HandleBuffer();
-			return conditions;
+			return _conditions;
 		}
 
 		private void ParseChar() {
 			char[] separators = {'[', '#', '^', '*', '+', '@'};
-			char c = _full[_position];
+			var c = _full[_position];
 			++_position;
 
-			if (_currentlyParsing == TokenType.ValueCondition) {
+			if (_currentlyParsing == ConditionTokenType.ValueCondition) {
 				if (c == ']') {
 					HandleBuffer();
 					return; // don't put into buffer
 				}
 			} else {
 				if (separators.Contains(c)) {
-					var bufferWasEmpty = (_buffer == "");
+					var bufferWasEmpty = _buffer == "";
 
 					// handle buffer
 					HandleBuffer();
@@ -55,18 +55,18 @@ namespace sdf.Core.Matching {
 					// start parsing something new
 					if (c == '@') {
 						if (bufferWasEmpty) { // attribute name
-							_currentlyParsing = TokenType.AttributeName;
+							_currentlyParsing = ConditionTokenType.AttributeName;
 						} else { // node@111
-							_currentlyParsing = TokenType.NodeNumber;
+							_currentlyParsing = ConditionTokenType.NodeNumber;
 						}
 					} else if (c == '[') {
-						_currentlyParsing = TokenType.ValueCondition;
+						_currentlyParsing = ConditionTokenType.ValueCondition;
 					} else if (c == '#') {
-						_currentlyParsing = TokenType.NodeIndex;
+						_currentlyParsing = ConditionTokenType.NodeIndex;
 					} else if (c == '^') {
-						_currentlyParsing = TokenType.Type;
+						_currentlyParsing = ConditionTokenType.Type;
 					} else if (c == '*' || c == '+') {
-						conditions.Add(new ArbitraryNodeHierarchyCondition(c == '+'));
+						_conditions.Add(new ArbitraryNodeHierarchyCondition(c == '+'));
 					}
 
 					return; // don't put into buffer
@@ -77,35 +77,38 @@ namespace sdf.Core.Matching {
 		}
 
 		private void HandleBuffer() {
-			Condition c = GetConditionFromBuffer();
-			if (c != null)
-				conditions.Add(c);
+			var c = GetConditionFromBuffer();
+			if (c != null) {
+				_conditions.Add(c);
+			}
 
 			// reset state
-			_currentlyParsing = TokenType.NodeName;
+			_currentlyParsing = ConditionTokenType.NodeName;
 			_buffer = "";
 		}
 
 		private Condition GetConditionFromBuffer() {
-			if (_buffer == "") return null;
+			if (_buffer == "") {
+				return null;
+			}
 
 			switch (_currentlyParsing) {
-				case TokenType.NodeName:
+				case ConditionTokenType.NodeName:
 					return new NodeNameCondition(_buffer);
 
-				case TokenType.AttributeName:
+				case ConditionTokenType.AttributeName:
 					return new AttributeNameCondition(_buffer);
 
-				case TokenType.NodeIndex:
+				case ConditionTokenType.NodeIndex:
 					return new NodeIndexCondition(int.Parse(_buffer));
 
-				case TokenType.NodeNumber:
+				case ConditionTokenType.NodeNumber:
 					return new NodeNumberCondition(int.Parse(_buffer));
 
-				case TokenType.Type:
+				case ConditionTokenType.Type:
 					return new TypeCondition(_buffer);
 
-				case TokenType.ValueCondition:
+				case ConditionTokenType.ValueCondition:
 					return ValueCondition.Parse(_buffer);
 
 				default:

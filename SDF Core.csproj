@@ -5,13 +5,28 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{D3BDF9A8-FD0B-4B9A-B5E5-975E2B2AC1ED}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>sdf</RootNamespace>
     <AssemblyName>sdf</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -22,6 +37,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\Debug\sdf.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -31,6 +47,9 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="JetBrains.Annotations, Version=10.2.1.0, Culture=neutral, PublicKeyToken=1010a0d8d6380325, processorArchitecture=MSIL">
@@ -47,23 +66,36 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Core\Building\Builder.cs" />
-    <Compile Include="Core\Building\SDF.cs" />
-    <Compile Include="Core\Matching\Condition.cs" />
-    <Compile Include="Core\Matching\ConditionParser.cs" />
-    <Compile Include="Core\Matching\Match.cs" />
-    <Compile Include="Core\Matching\Matcher.cs" />
-    <Compile Include="Core\Parsing\Expression.cs" />
-    <Compile Include="Core\Parsing\SdfStreamingParser.cs" />
-    <Compile Include="Core\Parsing\Parser.cs" />
-    <Compile Include="Core\Printer.cs" />
-    <Compile Include="Core\Schema\Schema.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="Parsing\SimpleParser.cs" />
+    <Compile Include="SDF.cs" />
+    <Compile Include="Matching\Condition.cs" />
+    <Compile Include="Matching\ConditionParser.cs" />
+    <Compile Include="Matching\Match.cs" />
+    <Compile Include="Matching\Matcher.cs" />
+    <Compile Include="Parsing\SExpression\Expression.cs" />
+    <Compile Include="Parsing\StreamingParser.cs" />
+    <Compile Include="Parsing\SExpression\Parser.cs" />
+    <Compile Include="Printing\Printer.cs" />
+    <Compile Include="Validating\Schema.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Validating\SchemaElement.cs" />
+    <Compile Include="Validating\SchemaNodeExtension.cs" />
+    <Compile Include="Validating\SchemaType.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.5.2 %28x86 and x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

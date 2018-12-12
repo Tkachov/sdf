@@ -5,16 +5,14 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("sdf")]
+[assembly: AssemblyTitle("ConsoleExamples")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Microsoft")]
-[assembly: AssemblyProduct("sdf")]
+[assembly: AssemblyProduct("ConsoleExamples")]
 [assembly: AssemblyCopyright("Copyright © Microsoft 2018")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-
-[assembly: InternalsVisibleTo("Tests")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
@@ -22,7 +20,7 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("d3bdf9a8-fd0b-4b9a-b5e5-975e2b2ac1ed")]
+[assembly: Guid("e872a145-3153-4981-9c27-cd78b699f9b4")]
 
 // Version information for an assembly consists of the following four values:
 //

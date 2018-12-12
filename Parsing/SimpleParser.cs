@@ -1,27 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
-using sdf.Core.Parsing;
+using sdf.Parsing.SExpression;
 
-namespace sdf.Core.Building {
-	class Builder {
-		public static SDF Build(Expression e) {
-			if (e is LiteralExpression)
+namespace sdf.Parsing {
+	/// <summary>
+	///     Simple SDF parser.
+	///     Uses <c>SExpression.Parser</c> to parse data into intermediate S-Expression and then builds <c>SDF</c>
+	///     representation from it.
+	/// </summary>
+	public sealed class SimpleParser {
+		/// <summary>
+		///     Parse SDF from a file with given name.
+		/// </summary>
+		/// <param name="filename">Name of a file to read SDF from.</param>
+		/// <returns>Parsed SDF.</returns>
+		public static SDF Parse([NotNull] string filename) {
+			var root = Parser.Parse(filename);
+			return Build(root);
+		}
+
+		internal static SDF Build(Expression e) {
+			if (e is LiteralExpression) {
 				return BuildLiteral((LiteralExpression) e);
+			}
 
 			return BuildNode((ListExpression) e);
 		}
 
 		private static Node BuildNode(ListExpression e) {
-			if (e.Type != ListBracketsType.Round)
+			if (e.Type != ListBracketsType.Round) {
 				throw new InvalidDataException("Syntax error: () list expected while building a Node.");
+			}
 
-			if (e.Contents.Count < 1 || e.Contents.Count > 3)
+			if (e.Contents.Count < 1 || e.Contents.Count > 3) {
 				throw new InvalidDataException("Syntax error: Node's () list must contain from 1 to 3 element within.");
+			}
 
 			string name;
 			var attributes = new Dictionary<string, SDF>();
@@ -30,9 +45,10 @@ namespace sdf.Core.Building {
 			// name
 
 			var first = e.Contents[0];
-			var literalFirst = (first as LiteralExpression);
-			if (literalFirst == null || literalFirst.Type != LiteralType.Keyword)
+			var literalFirst = first as LiteralExpression;
+			if (literalFirst == null || literalFirst.Type != LiteralType.Keyword) {
 				throw new InvalidDataException("Syntax error: Node's name must be a keyword.");
+			}
 
 			name = literalFirst.Value; // TODO: check name matches regexp
 
@@ -40,7 +56,7 @@ namespace sdf.Core.Building {
 
 			if (e.Contents.Count > 1) {
 				var second = e.Contents[1];
-				var listSecond = (second as ListExpression);
+				var listSecond = second as ListExpression;
 
 				if (e.Contents.Count > 2) {
 					var third = e.Contents[2];
@@ -61,25 +77,28 @@ namespace sdf.Core.Building {
 		}
 
 		private static void BuildAttributes(ref Dictionary<string, SDF> attributes, ListExpression list) {
-			if (list.Type != ListBracketsType.Curly)
+			if (list.Type != ListBracketsType.Curly) {
 				throw new InvalidDataException("Syntax error: {} list excepted while building Node's attributes.");
+			}
 
 			LiteralExpression key = null;
 			var odd = true;
 			foreach (var expr in list.Contents) {
 				if (odd) {
 					key = expr as LiteralExpression;
-					if (key == null || key.Type == LiteralType.String)
+					if (key == null || key.Type == LiteralType.String) {
 						throw new InvalidDataException("Syntax error: attribute name must be a keyword.");
+					}
 				} else {
 					attributes.Add(key.Value, Build(expr));
 				}
+
 				odd = !odd;
 			}
 		}
 
 		private static void BuildChildren(ref List<SDF> children, Expression e) {
-			var list = (e as ListExpression);
+			var list = e as ListExpression;
 			if (list == null) {
 				// literal
 				children.Add(Build(e));
@@ -87,8 +106,9 @@ namespace sdf.Core.Building {
 			}
 
 			// list
-			if (list.Type == ListBracketsType.Curly)
+			if (list.Type == ListBracketsType.Curly) {
 				throw new InvalidDataException("Syntax error: Node's child or children cannot be represented as {} list.");
+			}
 
 			// single node
 			if (list.Type == ListBracketsType.Round) {
@@ -97,28 +117,30 @@ namespace sdf.Core.Building {
 			}
 
 			// list of children
-			foreach (var expr in list.Contents) {
-				children.Add(Build(expr));
-			}			
+			children.AddRange(list.Contents.Select(Build));
 		}
 
 		private static SDF BuildLiteral(LiteralExpression e) {
-			if (e.Type == LiteralType.String)
+			if (e.Type == LiteralType.String) {
 				return new StringLiteral(e.Value);
-			
+			}
+
 			var lowercased = e.Value.ToLower();
 
-			if (lowercased == "null")
+			if (lowercased == "null") {
 				return new NullLiteral();
+			}
 
-			if (lowercased == "true" || lowercased == "false")
+			if (lowercased == "true" || lowercased == "false") {
 				return new BooleanLiteral(lowercased == "true");
-			
-			var index = lowercased.IndexOf('.');
-			if (index == -1)
-				return new NumberLiteral(long.Parse(lowercased), 0);
+			}
 
-			return new NumberLiteral(long.Parse(lowercased.Substring(0, index)), long.Parse(lowercased.Substring(index+1)));
+			var index = lowercased.IndexOf('.');
+			if (index == -1) {
+				return new NumberLiteral(long.Parse(lowercased), 0);
+			}
+
+			return new NumberLiteral(long.Parse(lowercased.Substring(0, index)), long.Parse(lowercased.Substring(index + 1)));
 		}
 	}
 }

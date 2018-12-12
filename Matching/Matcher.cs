@@ -1,26 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using sdf.Core.Building;
 
-namespace sdf.Core.Matching {
-	internal class MultipleConditions {
-		public readonly List<Condition> Conditions;
+namespace sdf.Matching {
+	internal sealed class MultipleConditions {
+		internal readonly List<Condition> Conditions;
 
-		public bool HasArbitraryHierarchy {
+		internal bool HasArbitraryHierarchy {
 			get {
 				foreach (var c in Conditions) {
-					if (c is ArbitraryNodeHierarchyCondition)
+					if (c is ArbitraryNodeHierarchyCondition) {
 						return true;
+					}
 				}
+
 				return false;
 			}
 		}
 
-		public MultipleConditions(List<Condition> l) {
+		internal MultipleConditions(List<Condition> l) {
 			Conditions = l;
 
 			var count = 0;
@@ -28,13 +28,22 @@ namespace sdf.Core.Matching {
 				throw new InvalidDataException("Cannot have multiple arbitrary node hierarchy conditions (* or +) at the same hierarchy level.");
 			}
 		}
-		
+
 		internal bool Matches(SDF sdf, SDF parent, string attrbuteName) {
 			return Conditions.All(c => c.Matches(sdf, parent, attrbuteName));
 		}
 	}
 
-	public class Matcher {
+	/// <summary>
+	///     Class to find all elements matching SDF Path in a given SDF.
+	/// </summary>
+	public sealed class Matcher {
+		/// <summary>
+		///     Find all elements matching given SDF Path in a given SDF.
+		/// </summary>
+		/// <param name="s">SDF to find elements in.</param>
+		/// <param name="path">SDF Path for elements to match to.</param>
+		/// <returns></returns>
 		public static List<Match> Match(SDF s, string path) {
 			return MatchConditions(Matching.Match.MakeRootMatch(s), ParseConditions(path)).Distinct().ToList();
 		}
@@ -46,9 +55,10 @@ namespace sdf.Core.Matching {
 
 			var l = new List<MultipleConditions>();
 			var stringConditions = path.Split('/');
-			for (int i = 1; i < stringConditions.Length; ++i) { // skip 0th, because it's empty
+			for (var i = 1; i < stringConditions.Length; ++i) { // skip 0th, because it's empty
 				l.Add(ParseCondition(stringConditions[i]));
 			}
+
 			return l;
 		}
 
@@ -57,30 +67,43 @@ namespace sdf.Core.Matching {
 			return new MultipleConditions(p.Parse());
 		}
 
+		[ExcludeFromCodeCoverage]
 		private static void PrintPath(List<MultipleConditions> conditions) {
 			foreach (var c in conditions) {
 				Console.Write("/");
 				PrintConditions(c.Conditions);
 			}
+
 			Console.WriteLine();
 		}
 
+		[ExcludeFromCodeCoverage]
 		private static void PrintConditions(List<Condition> conditions) {
 			foreach (var c in conditions) {
-				if (c is NodeNameCondition)
+				if (c is NodeNameCondition) {
 					Console.Write((c as NodeNameCondition).NodeName);
-				else if (c is AttributeNameCondition)
+				} else if (c is AttributeNameCondition) {
 					Console.Write("@" + (c as AttributeNameCondition).AttributeName);
-				else if (c is ArbitraryNodeHierarchyCondition)
+				} else if (c is ArbitraryNodeHierarchyCondition) {
 					Console.Write((c as ArbitraryNodeHierarchyCondition).AtLeastOne ? "+" : "*");
-				else if (c is TypeCondition) {
+				} else if (c is TypeCondition) {
 					Console.Write("^");
 					switch ((c as TypeCondition).Type) {
-						case SDFType.Node: Console.Write("node"); break;
-						case SDFType.Null: Console.Write("null"); break;
-						case SDFType.Number: Console.Write("number"); break;
-						case SDFType.String: Console.Write("string"); break;
-						case SDFType.Boolean: Console.Write("bool"); break;
+						case SDFType.Node:
+							Console.Write("node");
+							break;
+						case SDFType.Null:
+							Console.Write("null");
+							break;
+						case SDFType.Number:
+							Console.Write("number");
+							break;
+						case SDFType.String:
+							Console.Write("string");
+							break;
+						case SDFType.Boolean:
+							Console.Write("bool");
+							break;
 					}
 				}
 			}
@@ -97,12 +120,12 @@ namespace sdf.Core.Matching {
 				return res;
 			}
 
-			MultipleConditions first = conditionsHierarchy[0];
-			List<MultipleConditions> rest = conditionsHierarchy.GetRange(1, conditionsHierarchy.Count - 1);
+			var first = conditionsHierarchy[0];
+			var rest = conditionsHierarchy.GetRange(1, conditionsHierarchy.Count - 1);
 
-			List<Condition> conditions = first.Conditions;
-			bool hasArbitrary = first.HasArbitraryHierarchy;
-			bool arbitraryAtLeastOne = false;
+			var conditions = first.Conditions;
+			var hasArbitrary = first.HasArbitraryHierarchy;
+			var arbitraryAtLeastOne = false;
 			foreach (var c in conditions) {
 				if (c is ArbitraryNodeHierarchyCondition) {
 					arbitraryAtLeastOne = (c as ArbitraryNodeHierarchyCondition).AtLeastOne;
@@ -133,29 +156,35 @@ namespace sdf.Core.Matching {
 				// if no inner hierarchy conditions left, sdf matches
 				if (rest.Count == 0) {
 					// but if current rule has '+', sdf does not match
-					if (!hasArbitrary || !arbitraryAtLeastOne)
+					if (!hasArbitrary || !arbitraryAtLeastOne) {
 						res.Add(m);
+					}
 				}
 
 				var n = m as MatchNode;
-				if (n == null) return res;
+				if (n == null) {
+					return res;
+				}
 
 				if (hasArbitrary) {
 					// pass arbitrary
-					List<MultipleConditions> modifiedConditions = new List<MultipleConditions>();
+					var modifiedConditions = new List<MultipleConditions>();
 					if (arbitraryAtLeastOne) {
 						// replace + with *, as we have matched one already
-						List<Condition> modConditions = new List<Condition>();
+						var modConditions = new List<Condition>();
 						foreach (var c in conditions) {
 							if (c is ArbitraryNodeHierarchyCondition) {
 								modConditions.Add(new ArbitraryNodeHierarchyCondition(false));
-							} else
+							} else {
 								modConditions.Add(c);
+							}
 						}
+
 						modifiedConditions.Add(new MultipleConditions(modConditions));
 					} else {
 						modifiedConditions.Add(first);
 					}
+
 					modifiedConditions.AddRange(rest);
 
 					foreach (var c in n.Children) {

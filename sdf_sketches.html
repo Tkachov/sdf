@@ -1,0 +1,300 @@
+<!doctype html>
+<html>
+	<head>
+		<title>SDF</title>
+		<meta charset="utf-8"/>
+		<style>
+		html { margin: 0; padding: 0; border: 0; font-family: Tahoma; background: #F9F9F9; }
+		body {
+			margin: 0 auto;
+			padding: 20pt 0;
+			width: 1000pt;
+			vertical-align: top;
+		}
+
+		.page {
+			margin: 0;
+			padding: 20pt 15pt;
+			width: calc(50% - 2*15pt - 10pt);
+			/*min-height: 300pt;*/
+			display: inline-block;
+			background: #FFF;
+
+			margin-bottom: 20pt;
+			vertical-align: top;
+		}
+
+		.page.even {
+			margin-left: 20pt;
+		}
+
+		.page > h1, .common_header > h1 {
+			margin-top: 0;
+			font-family: "Adobe Garamond Pro", "Times New Roman";
+			font-weight: normal;
+			font-size: 28pt;
+
+			border-top: 1.5pt solid #000000;
+			border-bottom: 1.5pt solid #000000;
+			padding-top: 4pt;
+
+			color: #333;
+		}
+
+		.page > ul > li {
+			margin-top: 10pt;
+		}
+
+		.common_header {
+			margin: 0;
+			margin-bottom: 20pt;
+			padding: 20pt 15pt;
+			background: #FFF;
+		}
+
+		.common_header > .page {
+			padding: 0;
+			width: calc(50% - 15pt - 10pt);
+		}
+
+		.common_header > .page {
+			padding-right: 15pt;
+		}
+
+		.common_header > .page.even {
+			padding-right: 0;
+			padding-left: 15pt;
+		}
+
+		.pseudogrammar {
+			width: 100%;
+			color: #000;
+			font-weight: bold;
+		}
+
+		.pseudogrammar td:first-child {
+			width: 20%;
+		}
+
+		.pseudogrammar b {
+			color: #009;
+			font-weight: normal;
+		}
+
+		.pseudogrammar b::before {
+			content: '<';
+		}
+
+		.pseudogrammar b.opt::before {
+			content: '[<';
+		}
+
+		.pseudogrammar b::after {
+			content: '>';
+		}
+
+		.pseudogrammar b.opt::after {
+			content: '>]';
+		}
+
+		.pseudogrammar b.rep::after {
+			content: '>*';
+		}
+
+		.pseudogrammar i {
+			color: #090;
+			font-style: normal;
+			font-weight: normal;
+		}
+
+		.pseudogrammar i.or {
+			color: #A00;
+			font-weight: bold;
+		}
+
+		.pseudogrammar .l {
+			font-weight: normal;
+		}
+
+		.xpath {
+
+		}
+
+		.xpath td {
+			padding-top: 10pt;
+			vertical-align: top;
+		}
+
+		.xpath td:first-child {
+			width: 25%;
+			font-weight: bold;
+		}
+		</style>
+	</head>
+	<body><div class="page">
+			<h1>«Псевдокод» грамматики</h1>
+			<table class="pseudogrammar">
+				<tr><td><b>sdf</b></td><td><b>node</b><i class="or">|</i><b>literal</b></td></tr>
+				<tr><td><b>node</b></td><td>(<b>name</b> <b class="opt">attributes</b> <b class="opt">children</b>)</td></tr>
+				<tr><td><b>name</b></td><td><i>[A-Za-z0-9_:.-]+</i></td></tr>
+				<tr><td><b>attributes</b></td><td>{<b class="rep">attribute</b>}</td></tr>
+				<tr><td><b>attribute</b></td><td><b>name</b> <b>sdf</b></td></tr>
+				<tr><td><b>children</b></td><td>[<b class="rep">sdf</b>]<i class="or">|</i><b>sdf</b></td></tr>
+				<tr><td><b>literal</b></td><td><b>number</b><i class="or">|</i><b>boolean</b><i class="or">|</i><b>string</b><i class="or">|</i>null</td></tr>
+				<tr><td><b>number</b></td><td><i>-?[0-9]+(.[0-9])?</i></td></tr>
+				<tr><td><b>boolean</b></td><td>true<i class="or">|</i>false</td></tr>
+				<tr><td><b>string</b></td><td>"<b>characters-or-escape-sequences</b>"</td></tr>
+				<tr><td colspan="2"><br/></td></tr>
+				<tr><td colspan="2" class="l">Легенда</td></tr>
+				<tr><td>{}[]()</td><td class="l">Символы</td></tr>
+				<tr><td><b>x</b></td><td class="l">Токен с именем x</td></tr>
+				<tr><td><b>x</b><i class="or">|</i><b>y</b></td><td class="l">Токену соответствует либо x, либо y</td></tr>
+				<tr><td><b class="opt">x</b></td><td class="l">Необязательный токен</td></tr>
+				<tr><td><b class="rep">x</b></td><td class="l">Список из произвольного количества токенов x</td></tr>
+				<tr><td><i>[A-Z]</i></td><td class="l">Регулярное выражение, которое соответствует токену</td></tr>
+			</table>
+		</div><div class="page even">
+			<h1>Пояснения</h1>
+			<ul>
+				<li>Хочется что-то JSON-подобное, менее громоздкое, чем XML — чтобы значением мог быть и атом, без узлов.</li>
+				<li>Узлы могут не иметь атрибутов или потомков, могут быть и просто пустые узлы — но обязательно с именем.</li>
+				<li>Имена могут начинаться с цифр, мне не жалко.</li>
+				<li>Атрибутам может соответствовать произвольный объект. Пустых атрибутов быть не может.</li>
+				<li>Можно опускать квадратные скобки, если потомок только один.</li>
+				<li>Числа для простоты заданы так, можно было бы добавить и всякие шестнадцатиричные и экспоненциальную запись.</li>
+				<li>Строки «обычные», для простоты можно не поддерживать с одинарными кавычками.</li>
+			</ul>
+		</div><div class="common_header"><h1>Пример: XML/HTML</h1><div class="page">
+			<pre>
+&lt;html&gt;
+	&lt;head&gt;
+		&lt;title&gt;hello&lt;/title&gt;
+	&lt;/head&gt;
+	&lt;body&gt;
+		&lt;h1&gt;hello&lt;/h1&gt;
+		&lt;p&gt;world &lt;b&gt;is&lt;/b&gt; great&lt;/p&gt;
+		&lt;img src="file.png" /&gt;
+	&lt;/body&gt;
+&lt;/html&gt;
+			</pre>
+		</div><div class="page even">
+			<pre>
+(html [
+	(head
+		(title "hello")
+	)
+	(body [
+		(h1 "hello")
+		(p [
+			"world "
+			(b "is")
+			" great"
+		])
+		(img {src "file.png"})
+	])
+])
+			</pre>
+			<p>Потомки могут быть разными, атомы и узлы вперемешку.</p>
+		</div></div><div class="common_header"><h1>Пример: JSON</h1><div class="page">
+			<pre>
+[
+	{a: 1, b: 2}, 
+	{a: 3, b: 4}
+]
+			</pre>
+		</div><div class="page even">
+			<pre>
+(list [
+	(dict {a 1 b 2})
+	(dict {a 3 b 4})
+])
+			</pre>
+			<p>Для адресации узлы должны иметь имена.</p>
+			<p>Список атрибутов можно использовать вместо hash/map/dict, потому что его значениями могут быть произвольные структуры (в отличие от строк в XML).</p>
+		</div></div><div class="common_header"><h1>Пример: атрибуты и потомки</h1><div class="page">
+			<pre>
+(node
+	{
+		attr
+		(attr-node {attr-node-attr 1} (attr-node-children 2))
+	} 
+	[
+		1 
+		(subnode 2) 
+		3
+	]
+)
+			</pre>
+		</div><div class="page even">
+			<p>В отличие от JSON, в данном формате узел может одновременно иметь атрибуты и потомков, такой мутант {} и [].</p>
+		</div></div><div class="common_header">
+			<h1>Наброски xpath-подобного языка</h1>
+			<table class="xpath">
+				<tr>
+					<td>/html/body</td>
+					<td>Абсолютный путь от корня</td>
+				</tr>
+				<tr>
+					<td>body/p</td>
+					<td>Относительный путь</td>
+				</tr>
+				<tr>
+					<td>/html</td>
+					<td>Узел html.</td>
+				</tr>
+				<tr>
+					<td>/html/</td>
+					<td>Все потомки узла html (фактически, после / идет пустой список ограничений на искомые узлы).</td>
+				</tr>
+				<tr>
+					<td>node/@attr/attr-node</td>
+					<td>Обращение к иерархии внутри атрибута attr узла node.</td>
+				</tr>
+				<tr>
+					<td>body/*/b<br/>body/+/b</td>
+					<td>Путь с переменной вложенностью (аналогично PCRE, * это 0 и более, + это 1 и более). Вложенность может быть в том числе через узлы-атрибуты (body/@attr/b).</td>
+				</tr>
+				<tr>
+					<td>node/#0</td>
+					<td>Обращение к узлу по порядковому номеру.</td>
+				</tr>
+				<tr>
+					<td>node/inner@0</td>
+					<td>Обращение к указанному по счету узлу с указанным именем (возможно, стоит расширить на произвольные условия).<br/>Пояснение: h1#1 дает элемент h1, который является вторым в списке потомков, h1@1 дает второй элемент h1 (даже если в списке потомков он находится, например, на десятом месте).</td>
+				</tr>
+				<tr>
+					<td>node/^n</td>
+					<td>Обращение к узлам с указанным типом (n — number, s — string, b — boolean, ? — node, ? — null).</td>
+				</tr>
+				<tr>
+					<td>node/[&gt;2]</td>
+					<td>Условие на значение узла. В зависимости от типа узла применимы разные условия:
+						<ul>
+							<li>Для чисел: &gt;, &lt;, &gt;=, &lt;=, =, !=;</li>
+							<li>Для строк: =, !=, ~=, ^=, $= (имеет подстроку, начинается с подстроки, заканчивается подстрокой);</li>
+							<li>Для строк, вероятно, стоит также добавить версии-отрицания !~=, !^=, !$=;</li>
+							<li>Для булевых значений и null: =, !=;</li>
+							<li>Для узлов: условия на значения атрибутов (см. ниже), предикаты вида has_child(childname), has_attr(attrname).</li>
+						</ul></td>
+				</tr>
+				<tr>
+					<td>node[@attr&gt;2]</td>
+					<td>Условие на значение атрибута узла.</td>
+				</tr>
+				<tr>
+					<td>node/@attr[&gt;2]</td>
+					<td>Условие на значение узла, являющегося значением атрибута. Выглядит похоже на предыдущее, однако происходит выбор не узла node, а узла-значения attr, в данном случае — числовых значений, больших 2.</td>
+				</tr>
+				<tr><td colspan="2"><br/></td></tr>
+				<tr>
+					<td>node/[&gt;2]^s</td>
+					<td>Бессмысленно, но допустимо (для значений строкового типа данное условие неприменимо, поэтому они будут пропускаться, а у значений числового типа тип не тот).</td>
+				</tr>
+				<tr>
+					<td><br/>/*#0/person[has_child(room)]<br/>room[@area>10]/@number</td>
+					<td>Естественно, можно комбинировать произвольным образом.<br/>Например, в некоторой иерархии в первых потомках перечислены person, и мы хотим найти таких, у которых есть room.<br/>Или получить номера комнат, у которых площадь больше 10 (чего-нибудь).</td>
+				</tr>
+			</table>
+		</div>
+	</body>
+</html>

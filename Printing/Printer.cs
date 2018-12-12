@@ -1,24 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using sdf.Core.Building;
 
-namespace sdf.Core {
-	class Printer {
-		public static void Print(SDF s, int offset = 0, bool newLine = false) {
-			Node n = s as Node;
-			if (n == null) PrintLiteral(s, offset);
-			else PrintNode(n, offset);
+namespace sdf.Printing {
+	/// <summary>
+	///     Pretty prints SDF.
+	/// </summary>
+	public sealed class Printer {
+		/// <summary>
+		///     Pretty prints SDF.
+		/// </summary>
+		/// <param name="s">SDF element to pretty print.</param>
+		/// <param name="offset">Amount of tab characters to indent with.</param>
+		/// <param name="newLine">Whether to add a new line at the end.</param>
+		public static void Print(SDF s, int offset = 0, bool newLine = true) {
+			var n = s as Node;
+			if (n == null) {
+				PrintLiteral(s, offset);
+			} else {
+				PrintNode(n, offset);
+			}
 
-			if (newLine)
+			if (newLine) {
 				Console.WriteLine();
+			}
 		}
 
+		// private methods
+
 		private static void PrintOffset(int offset) {
-			for (int i=0; i<offset; ++i)
+			for (var i = 0; i < offset; ++i) {
 				Console.Write("\t");
+			}
 		}
 
 		private static void PrintLiteral(SDF literal, int offset) {
@@ -42,7 +53,7 @@ namespace sdf.Core {
 		private static bool PrintOnSameLineIfLiteral(SDF s, int offset, bool newLineIfLiteral) {
 			if (s is Node) {
 				Console.WriteLine();
-				Print(s, offset, true);
+				Print(s, offset);
 				return false;
 			}
 
@@ -57,37 +68,38 @@ namespace sdf.Core {
 			if (node.Attributes.Count > 0) {
 				Console.WriteLine();
 
-				PrintOffset(offset+1);
+				PrintOffset(offset + 1);
 				Console.WriteLine("{");
 
 				foreach (var attribute in node.Attributes) {
-					PrintOffset(offset+2);
+					PrintOffset(offset + 2);
 					Console.Write(attribute.Key);
-					PrintOnSameLineIfLiteral(attribute.Value, offset+3, true);
+					PrintOnSameLineIfLiteral(attribute.Value, offset + 3, true);
 				}
 
-				PrintOffset(offset+1);
+				PrintOffset(offset + 1);
 				Console.Write("}");
 			}
 
 			if (node.Children.Count == 1) {
 				var child = node.Children[0];
-				var isLiteral = PrintOnSameLineIfLiteral(child, offset+1, false);
-				if (!isLiteral)
+				var isLiteral = PrintOnSameLineIfLiteral(child, offset + 1, false);
+				if (!isLiteral) {
 					PrintOffset(offset); // for the last )
+				}
 			}
 
 			if (node.Children.Count > 1) {
 				Console.WriteLine();
 
-				PrintOffset(offset+1);
+				PrintOffset(offset + 1);
 				Console.WriteLine("[");
 
 				foreach (var child in node.Children) {
-					Print(child, offset+2, true);
+					Print(child, offset + 2);
 				}
 
-				PrintOffset(offset+1);
+				PrintOffset(offset + 1);
 				Console.Write("]");
 			}
 
